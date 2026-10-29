@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Éclair</title>
+  <path d="M36 4 14 35h14l-3 25 25-34H35Z" fill="none" stroke="#e8d5a3" stroke-width="3.2" stroke-linejoin="round"/>
+  <path d="M35 13 22 32h12l-2 17 12-17H33Z" fill="#e8d5a3"/>
+</svg>

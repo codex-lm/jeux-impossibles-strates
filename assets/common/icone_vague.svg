@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Vague</title>
+  <g fill="none" stroke="#e8d5a3" stroke-width="3" stroke-linecap="round">
+    <path d="M5 23c7-9 13-9 20 0s13 9 20 0 11-8 14-4"/>
+    <path d="M5 34c7-9 13-9 20 0s13 9 20 0 11-8 14-4" opacity="0.82"/>
+    <path d="M5 45c7-9 13-9 20 0s13 9 20 0 11-8 14-4" opacity="0.58"/>
+  </g>
+</svg>

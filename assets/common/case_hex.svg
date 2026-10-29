@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <title>Case hexagonale</title>
+  <polygon points="50,4 89.8,27 89.8,73 50,96 10.2,73 10.2,27" fill="#142035" fill-opacity="0.88" stroke="#e8d5a3" stroke-width="1.8" stroke-linejoin="round"/>
+  <polygon points="50,10 84.7,30 84.7,70 50,90 15.3,70 15.3,30" fill="none" stroke="#e8d5a3" stroke-opacity="0.2" stroke-width="0.8"/>
+  <path d="M50 4v6M89.8 27l-5.1 3M89.8 73l-5.1-3M50 96v-6M10.2 73l5.1-3M10.2 27l5.1 3" fill="none" stroke="#e8d5a3" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

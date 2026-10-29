@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 64">
+  <title>Ornement de titre</title>
+  <g fill="none" stroke="#e8d5a3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 32h198c24 0 37-4 51-13l24-15M632 32H434c-24 0-37-4-51-13l-24-15" stroke-width="1.4" opacity="0.72"/>
+    <path d="M8 38h210c19 0 32-3 44-11l19-12M632 38H422c-19 0-32-3-44-11l-19-12" stroke-width="0.8" opacity="0.35"/>
+    <path d="m320 14 10 12 16 6-16 6-10 12-10-12-16-6 16-6Z" stroke-width="1.5"/>
+    <path d="m320 24 5 8-5 8-5-8Z" fill="#e8d5a3" stroke="none"/>
+    <path d="M279 32h12M349 32h12" stroke-width="2"/>
+    <circle cx="270" cy="32" r="2.2" fill="#e8d5a3" stroke="none"/>
+    <circle cx="370" cy="32" r="2.2" fill="#e8d5a3" stroke="none"/>
+  </g>
+</svg>

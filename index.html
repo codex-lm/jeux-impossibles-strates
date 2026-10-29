@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STRATES — Hex en 3D, avec gravité et cavernes cachées</title>
+<style>
+  :root{
+    --nuit:#241318; --azur:#6ec8ff; --corail:#ff9166;
+    --or:#f3e5d0; --cuivre:#d98e4a;
+    --panel:rgba(28,15,18,.82); --bord:#4a2a22;
+  }
+  /* facteur racine fluide : ~16 px vers 1500 px de large, ~27 px en 4K —
+     toute l'UI est exprimée en rem et grandit avec lui */
+  html{font-size:clamp(14px, calc(9px + 0.46vw), 27px)}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--or); overflow:hidden;
+    background:linear-gradient(180deg, var(--nuit) 0%, #3a1f1c 100%);
+    font-family:Georgia,'Times New Roman',serif;
+    -webkit-user-select:none; user-select:none;
+  }
+  #vue{position:fixed; inset:0; display:block; cursor:default}
+
+  /* ---------- en-tête ---------- */
+  header{position:fixed; top:0; left:0; right:0; text-align:center;
+    padding:.9rem .6rem .5rem; pointer-events:none; z-index:6}
+  h1{margin:0; font-weight:600; letter-spacing:.5em; text-indent:.5em;
+    font-size:2.25rem; color:var(--cuivre)}
+  .sous{margin-top:.3rem; font-size:.8rem;
+    letter-spacing:.16em; color:rgba(243,229,208,.55)}
+  .filet{width:min(26rem,60vw); height:1px; margin:.55rem auto 0;
+    background:linear-gradient(90deg,transparent,rgba(217,142,74,.45),transparent)}
+  .boutons{margin-top:.65rem; pointer-events:auto; display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap}
+  button{
+    font-family:inherit; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--cuivre); background:rgba(217,142,74,.07);
+    border:1px solid rgba(217,142,74,.42); border-radius:3px;
+    padding:.5em 1.2em; cursor:pointer; pointer-events:auto;
+    transition:background .18s, border-color .18s;
+  }
+  button:hover{background:rgba(217,142,74,.17); border-color:rgba(217,142,74,.8)}
+  button.discret{opacity:.45}
+  button.danger{border-color:rgba(255,145,102,.55); color:var(--corail)}
+  button.danger:hover{background:rgba(255,145,102,.14)}
+
+  /* ---------- panneaux ---------- */
+  .panneau{position:fixed; z-index:5; background:var(--panel);
+    border:1px solid var(--bord); border-radius:5px; padding:.65rem .9rem;
+    backdrop-filter:blur(3px); pointer-events:none; font-size:.82rem; line-height:1.6}
+  #info{top:.9rem; left:.9rem; min-width:14.5rem}
+  #info .joueur{font-size:.9rem; letter-spacing:.06em}
+  #info .dim{color:rgba(243,229,208,.62); font-size:.78rem}
+  #info .sep{border:0; border-top:1px solid rgba(74,42,34,.9); margin:.45rem 0}
+  .pastille{display:inline-block; width:.58rem; height:.58rem; border-radius:50%; margin-right:.45rem; vertical-align:baseline}
+  .azurC{color:var(--azur)} .corailC{color:var(--corail)}
+  .pastille.azurBg{background:var(--azur)} .pastille.corailBg{background:var(--corail)}
+  #scanLigne{display:flex; align-items:center; gap:.5rem}
+  #scanLigne.actif{color:var(--cuivre); animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.65}50%{opacity:1}}
+  #icoScan{width:1.1rem; height:1.1rem; flex:0 0 auto; opacity:.85}
+  #icoScan img,#icoScan svg{width:100%; height:100%; display:block}
+
+  #minimapWrap{top:.9rem; right:.9rem; padding:.55rem .7rem .4rem; text-align:center}
+  #minimapWrap .legende{font-size:.65rem; letter-spacing:.1em; color:rgba(243,229,208,.5);
+    text-transform:uppercase; margin-top:.25rem}
+  #minimap{display:block}
+
+  #barre{bottom:.9rem; left:50%; transform:translateX(-50%);
+    display:flex; gap:.9rem; align-items:center; flex-wrap:wrap; justify-content:center;
+    max-width:min(94vw,56rem); text-align:center; padding:.55rem 1.1rem}
+  #barre .txt{font-size:.8rem; color:rgba(243,229,208,.8); letter-spacing:.03em}
+  #barre button{display:none}
+  #barre.avecSelection button{display:inline-block}
+
+  /* ---------- toast ---------- */
+  #toast{position:fixed; bottom:5.5rem; left:50%; transform:translateX(-50%);
+    z-index:8; background:rgba(28,15,18,.94); border:1px solid rgba(217,142,74,.45);
+    color:var(--or); padding:.55rem 1.4rem; border-radius:4px; font-size:.85rem;
+    letter-spacing:.04em; opacity:0; transition:opacity .3s; pointer-events:none; max-width:80vw; text-align:center}
+  #toast.visible{opacity:1}
+
+  /* ---------- voiles (passe l'appareil / victoire) ---------- */
+  .voile{position:fixed; inset:0; z-index:20; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:1.5rem;
+    background:radial-gradient(130vmax 90vmax at 50% 40%, #3a1f1c 0%, var(--nuit) 72%)}
+  .voile .sur{font-size:.75rem; letter-spacing:.5em; text-indent:.5em; color:rgba(217,142,74,.75);
+    text-transform:uppercase}
+  .voile .nom{font-size:clamp(2.1rem,6vw,4rem); margin:1rem 0 .4rem; letter-spacing:.1em; font-weight:600}
+  .voile .detail{max-width:35rem; color:rgba(243,229,208,.78); font-size:.95rem; line-height:1.7}
+  .voile .note{margin-top:.9rem; font-size:.8rem; color:rgba(243,229,208,.55); font-style:italic}
+  .voile .actions{margin-top:1.9rem; display:flex; gap:.9rem; flex-wrap:wrap; justify-content:center}
+  .voile .actions button{font-size:.8rem; padding:.7em 1.8em}
+
+  /* ---------- écran d'accueil ---------- */
+  #accueil .accueilCarte{display:flex; flex-direction:column; align-items:center;
+    max-width:min(34rem,92vw); width:100%}
+  #accueil .menuPrincipal{display:flex; flex-direction:column; gap:.75rem;
+    width:100%; margin-top:.7rem}
+  #accueil .choix{font-size:.95rem; letter-spacing:.1em; padding:.8em 1.3em;
+    text-transform:none; text-align:center}
+  #accueil .choix .sousBtn{display:block; font-size:.62rem; letter-spacing:.05em;
+    opacity:.62; margin-top:.3em; font-style:italic}
+  #accueil #accueilNote{margin-top:1rem; font-size:.78rem; color:var(--corail);
+    font-style:italic; min-height:1.3em; text-align:center; max-width:30rem}
+  #salonAttente .nom{font-size:clamp(1.3rem,3.4vw,2.1rem)}
+  #iaBadge{position:fixed; top:5.7rem; left:50%; transform:translateX(-50%); z-index:7;
+    background:var(--panel); border:1px solid rgba(255,145,102,.55); border-radius:4px;
+    padding:.5rem 1.4rem; font-size:.85rem; color:var(--corail); letter-spacing:.1em;
+    animation:pulse 1.3s ease-in-out infinite; pointer-events:none}
+
+  /* ---------- modale règles ---------- */
+  #regles{position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+    background:rgba(14,7,9,.76); padding:1.25rem}
+  #regles .carte{background:#1c0f12; border:1px solid var(--bord); border-radius:6px;
+    max-width:49rem; width:100%; max-height:84vh; overflow:auto; padding:1.9rem 2.5rem 2.1rem;
+    font-size:.9rem; line-height:1.65; box-shadow:0 18px 70px rgba(0,0,0,.6)}
+  #regles h2{margin:0 0 .25rem; letter-spacing:.35em; font-size:1.2rem; color:var(--cuivre)}
+  #regles h3{margin:1.4rem 0 .4rem; font-size:.85rem; letter-spacing:.22em; text-transform:uppercase; color:var(--cuivre)}
+  #regles h3.azurC{color:var(--azur)} #regles h3.corailC{color:var(--corail)}
+  #regles p{margin:.4rem 0; color:rgba(243,229,208,.85)}
+  #regles .pourquoi{margin-top:1.4rem; padding:.8rem 1.1rem; border:1px solid rgba(217,142,74,.35);
+    border-left:3px solid var(--cuivre); background:rgba(217,142,74,.06); font-style:italic; color:var(--or)}
+  #regles .fermer{margin-top:1.5rem; text-align:center}
+  .cache{display:none !important}
+</style>
+</head>
+<body>
+
+<canvas id="vue"></canvas>
+
+<header>
+  <h1>STRATES</h1>
+  <div class="sous">Hex en 3D, avec gravité et cavernes cachées</div>
+  <div class="filet"></div>
+  <div class="boutons">
+    <button id="btnNouvelle">Nouvelle partie</button>
+    <button id="btnRegles">Règles</button>
+    <button id="btnTextures" title="Plaquer les textures du dossier assets/ si le manifeste est présent (mode débrayable)">Textures&nbsp;: auto</button>
+    <button id="btnQuitterSalon" class="danger cache">Quitter le salon</button>
+  </div>
+</header>
+
+<div id="info" class="panneau">
+  <div class="joueur" id="tourLigne"></div>
+  <div class="dim" id="dtLigne"></div>
+  <hr class="sep">
+  <div><span class="pastille azurBg"></span>Azur — réserve&nbsp;: <b id="resA">16</b> cubes</div>
+  <div><span class="pastille corailBg"></span>Corail — réserve&nbsp;: <b id="resC">16</b> cubes</div>
+  <hr class="sep">
+  <div id="scanLigne" class="dim"></div>
+  <div class="dim" id="vueLigne"></div>
+</div>
+
+<div id="minimapWrap" class="panneau">
+  <canvas id="minimap"></canvas>
+  <div class="legende">hauteurs — info publique</div>
+</div>
+
+<div id="barre" class="panneau">
+  <span class="txt" id="txtAction"></span>
+  <button id="btnMiner" class="danger">Miner ce cube</button>
+  <button id="btnAnnuler">Annuler</button>
+  <button id="btnVue">Changer de vue</button>
+  <button id="btnRejouerFin">Rejouer</button>
+</div>
+
+<div id="toast"></div>
+
+<!-- écran « passe l'appareil » -->
+<div id="passage" class="voile cache">
+  <div class="sur">Passe l’appareil</div>
+  <div class="nom" id="passNom"></div>
+  <div class="detail" id="passDetail"></div>
+  <div class="note" id="passNote"></div>
+  <div class="actions"><button id="btnVoir">Voir mon plateau</button></div>
+</div>
+
+<!-- écran de victoire -->
+<div id="victoire" class="voile cache">
+  <div class="sur">Fin de partie</div>
+  <div class="nom" id="vicNom"></div>
+  <div class="detail" id="vicDetail"></div>
+  <div class="note" id="vicNote"></div>
+  <div class="actions">
+    <button id="btnRejouer">Rejouer</button>
+    <button id="btnExaminer">Examiner le plateau</button>
+  </div>
+</div>
+
+<!-- badge « L'IA réfléchit… » (tour de l'IA) -->
+<div id="iaBadge" class="cache">L’IA réfléchit…</div>
+
+<!-- écran d'accueil -->
+<div id="accueil" class="voile">
+  <div class="accueilCarte">
+    <div class="sur">Bienvenue au canyon</div>
+    <div class="nom">STRATES</div>
+    <div class="detail">Hex en 3D, avec gravité et cavernes cachées.<br>Choisis ton mode de duel.</div>
+    <div id="menuPrincipal" class="menuPrincipal">
+      <button class="choix" id="choixLocal">Deux joueurs — même écran<span class="sousBtn">Le duel original : on se passe l’appareil entre les tours.</span></button>
+      <button class="choix" id="choixIA">Contre l’IA<span class="sousBtn">Tu es Azur, la machine est Corail — honnête, elle ne voit que depuis son côté.</span></button>
+      <button class="choix" id="choixLigne">En ligne — salon LOB7<span class="sousBtn">Deux navigateurs réunis dans un même salon LOB7 (lob7.com).</span></button>
+    </div>
+    <div id="etapeIA" class="menuPrincipal cache">
+      <div class="detail" style="margin-bottom:.2rem">Quel niveau pour Corail&nbsp;?</div>
+      <button class="choix" id="choixIAFacile">Facile<span class="sousBtn">Environ 60&nbsp;% de coups aléatoires légaux.</span></button>
+      <button class="choix" id="choixIANormal">Normal<span class="sousBtn">Glouton : relier, bloquer le chemin visible, préserver ses cubes.</span></button>
+      <button class="choix discret" id="choixRetour">Retour</button>
+    </div>
+    <div id="accueilNote"></div>
+    <div class="actions"><button id="btnReglesAccueil">Lire les règles</button></div>
+  </div>
+</div>
+
+<!-- écran d'attente du salon LOB7 -->
+<div id="salonAttente" class="voile cache">
+  <div class="sur">Salon LOB7</div>
+  <div class="nom" id="salonEtat">Connexion au salon…</div>
+  <div class="detail" id="salonId"></div>
+  <div class="note">Le plus petit identifiant devient Azur — hôte et arbitre technique du volume.</div>
+  <div class="actions"><button id="btnQuitterSalon2" class="danger">Quitter le salon</button></div>
+</div>
+
+<!-- écran dédié : salon interrompu -->
+<div id="deco" class="voile cache">
+  <div class="sur">Salon interrompu</div>
+  <div class="nom">Partie interrompue</div>
+  <div class="detail" id="decoRaison"></div>
+  <div class="note">Rien n’a été diffusé au-delà des vues légitimes — les cavernes restent caves.</div>
+  <div class="actions"><button id="btnRetourAccueil">Retour à l’accueil</button></div>
+</div>
+
+<!-- modale règles -->
+<div id="regles" class="cache">
+  <div class="carte">
+    <h2>STRATES</h2>
+    <p style="color:rgba(243,229,208,.6)">Hex en 3D, avec gravité et cavernes cachées — duel au tour par tour&nbsp;: deux joueurs sur le même écran, contre l’IA, ou en ligne dans un salon LOB7.</p>
+
+    <h3>Le plateau</h3>
+    <p>Une base <b>4×4</b> ; chaque colonne accueille jusqu’à <b>4 cubes</b>, toujours remplie depuis le sol, sans trou (gravité stricte). Chaque joueur dispose de <b>16 cubes</b> en réserve ; le plateau est vide au départ. <span class="azurC">Azur</span> commence.</p>
+
+    <h3>À son tour, une seule action</h3>
+    <p><b>1. POSER</b> — un cube de réserve au sommet d’une colonne (si hauteur &lt; 4). Clique une case du sol, ou le <i>dessus</i> d’une colonne.</p>
+    <p><b>2. DÉPLACER</b> — un de <b>tes</b> cubes vers une colonne adjacente (±x ou ±y) : il atterrit au sommet. Montée d’au plus <b>1 niveau</b> (sommet destination ≤ hauteur du cube) ; descente libre. La colonne d’origine se compresse : ce qui était au-dessus retombe. Clique ton cube (face latérale) puis un fantôme <span style="color:var(--cuivre)">cuivré</span>.</p>
+    <p><b>3. MINER</b> — retire un de <b>tes</b> cubes, même enfoui : il retourne en réserve et la colonne se compresse d’un cran — les cubes adverses tombent. Arme tactique. Double-clic sur ton cube, touche <b>M</b>, ou bouton « Miner ».</p>
+
+    <h3 class="azurC">Victoire — hex vertical</h3>
+    <p><span class="azurC">Azur</span> relie la face <b>Ouest</b> (x=0) à la face <b>Est</b> (x=3) ; <span class="corailC">Corail</span> relie le <b>Sud</b> (y=0) au <b>Nord</b> (y=3), par une chaîne de cubes tangents face à face — adjacence en <b>6 directions</b> (±x, ±y, ±z). Vérifiée après chaque action, effondrements compris. Connexions simultanées : le joueur actif gagne.</p>
+
+    <h3>Occultation — le cœur du jeu</h3>
+    <p>Chaque joueur voit le plateau depuis <b>son</b> côté, en caméra isométrique <b>fixe</b> : Azur depuis l’Ouest, Corail depuis le Sud. Un cube bas dissimulé derrière une colonne haute est <b>invisible</b> : l’embuscade est légale. Aucune rotation libre. Entre les tours, l’écran « Passe l’appareil » protège les deux vues.</p>
+
+    <h3>Tomographie</h3>
+    <p>Tous les <b>8 demi-tours</b>, une couche horizontale aléatoire (z = 0 à 3) passe en <b>radiographie</b> pendant tout le tour : ses cubes — même occlus — apparaissent en surimpression translucide traversante. Public et momentané.</p>
+
+    <h3>Minimap</h3>
+    <p>En haut à droite : la grille vue de dessus avec la <b>hauteur</b> physique de chaque colonne — information publique. Les couleurs, elles, ne se voient que depuis son côté.</p>
+
+    <h3>Modes de jeu</h3>
+    <p><b>Même écran</b> — le duel original, écran « passe l’appareil » entre les tours. <b>Contre l’IA</b> — tu es <span class="azurC">Azur</span>, la machine est <span class="corailC">Corail</span>&nbsp;: <i>Facile</i> joue environ 60&nbsp;% de coups aléatoires légaux, <i>Normal</i> évalue gloutonnement chaque action légale (relier, bloquer, préserver). <b>En ligne — salon LOB7</b> — deux navigateurs réunis dans un même salon lob7.com.</p>
+
+    <h3>L’IA est honnête</h3>
+    <p>Elle connaît ses cubes partout, mais ne tient compte des cubes d’<span class="azurC">Azur</span> que s’ils sont <b>visibles depuis sa caméra</b> (le Sud) ou <b>révélés par une tomographie</b> pendant son tour — jamais une position masquée. Elle raisonne donc parfois sur un plateau plus pauvre que le réel&nbsp;: c’est le prix de l’honnêteté.</p>
+
+    <h3>En ligne — note d’honnêteté</h3>
+    <p>Le plus petit identifiant devient <span class="azurC">Azur</span> et héberge l’arbitrage&nbsp;: seul son navigateur détient le volume complet, valide les coups et ne diffuse jamais l’état nu — à <span class="corailC">Corail</span> ne parviennent que ses propres cubes, les cubes adverses visibles depuis le Sud, les hauteurs publiques et la tomographie active. L’hôte reste un <b>arbitre technique</b>&nbsp;: son navigateur connaît physiquement l’état complet, la discrétion est donc de mise — mais rien d’invisible ne lui est jamais envoyé, et la victoire n’est proclamée que par lui.</p>
+
+    <div class="pourquoi">Pourquoi impossible avant l’informatique : l’occultation équitable — chacun ne voit que depuis son côté — exige un écran ; sur une maquette physique, on triche en changeant d’angle.</div>
+
+    <div class="fermer"><button id="btnFermerRegles">Fermer</button></div>
+  </div>
+</div>
+
+<!-- =====================================================================
+     SDK LOB7 Rooms — COPIE INLINE (script dédié).
+     Provenance exacte, copiée verbatim sans retouche :
+       C:\dev\lob7\site\examples\prism-pair\lob7-rooms.js  (lob7.com)
+     strates.html reste un fichier unique ouvert en file:// — l'inline
+     est la seule façon de charger LOB7Rooms.connect() sans réseau.
+     ===================================================================== -->
+<script>
+/* LOB7 Rooms SDK. Bundle locally; load before the optional lob7-rooms-p2p.js helper. */
+(function () {
+  'use strict';
+  var PARENT_ORIGINS = ['https://lob7.com', 'https://www.lob7.com'];
+  var active = null;
+  var connecting = null;
+  function identifier() {
+    var bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function errorFrom(value) {
+    var error = new Error(value.message || 'Room request failed.');
+    error.code = value.code || 'ROOM_REQUEST_FAILED';
+    if (Number.isInteger(value.status)) error.status = value.status;
+    if (Number.isFinite(value.retryAfterSeconds)) error.retryAfterSeconds = value.retryAfterSeconds;
+    return error;
+  }
+  function validData(value) {
+    var todo = [{ value: value, depth: 0 }], seen = new Set(), nodes = 0;
+    while (todo.length) {
+      var item = todo.pop(), current = item.value;
+      if (++nodes > 8192 || item.depth > 64) return false;
+      if (typeof current === 'string') { if (current.length > 8192) return false; continue; }
+      if (current === null || typeof current === 'boolean') continue;
+      if (typeof current === 'number') { if (!Number.isFinite(current)) return false; continue; }
+      if (typeof current !== 'object' || seen.has(current)) return false;
+      seen.add(current);
+      if (!Array.isArray(current) && Object.getPrototypeOf(current) !== Object.prototype && Object.getPrototypeOf(current) !== null) return false;
+      var keys = Object.keys(current);
+      if (keys.length + todo.length > 8192 || keys.some(function (key) { return key.length > 8192; })) return false;
+      if (Array.isArray(current) && (current.length > 8192 || keys.length !== current.length)) return false;
+      Object.values(current).forEach(function (child) { todo.push({ value: child, depth: item.depth + 1 }); });
+    }
+    try { return new TextEncoder().encode(JSON.stringify(value)).byteLength <= 8192; } catch (_) { return false; }
+  }
+  function connection(room, port) {
+    var pending = new Map(), stopped = false, stopSubscription = null, subscriptionError = null, disconnectListeners = new Set();
+    function disconnect(reason) {
+      if (stopped) return;
+      stopped = true;
+      globalThis.removeEventListener('pagehide', leaveOnExit);
+      disconnectListeners.forEach(function (listener) { listener(errorFrom(reason)); });
+      disconnectListeners.clear();
+      var onError = subscriptionError;
+      if (stopSubscription) stopSubscription();
+      if (onError) { try { onError(errorFrom(reason)); } catch (_) { /* observer only */ } }
+      pending.forEach(function (task) { globalThis.clearTimeout(task.timer); task.reject(errorFrom(reason)); });
+      pending.clear();
+      port.close();
+      if (active === result) active = null;
+    }
+    port.onmessage = function (event) {
+      var response = event.data;
+      if (response && response.type === 'disconnected') return disconnect(response.error || { code: 'ROOM_CHANGED' });
+      var task = response && pending.get(response.requestId);
+      if (!task) return;
+      globalThis.clearTimeout(task.timer);
+      pending.delete(response.requestId);
+      if (response.error) task.reject(errorFrom(response.error));
+      else task.resolve(response.result);
+    };
+    port.onmessageerror = function () { disconnect({ code: 'ROOM_CONNECTION_CLOSED', message: 'The room connection closed. Connect again.' }); };
+    port.start();
+    function request(method, params) {
+      if (stopped) return Promise.reject(errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' }));
+      if (pending.size >= 4) return Promise.reject(errorFrom({ code: 'ROOM_BUSY', message: 'Too many requests are in progress.', retryAfterSeconds: 3 }));
+      var id = identifier();
+      return new Promise(function (resolve, reject) {
+        var timer = globalThis.setTimeout(function () {
+          pending.delete(id);
+          reject(errorFrom({ code: 'ROOM_TIMEOUT', message: 'The room request timed out. Retry a send using the same idempotency key.' }));
+        }, 25000);
+        pending.set(id, { resolve: resolve, reject: reject, timer: timer });
+        try { port.postMessage({ requestId: id, method: method, params: params }); }
+        catch (_) { globalThis.clearTimeout(timer); pending.delete(id); reject(errorFrom({ code: 'ROOM_PAYLOAD_INVALID' })); }
+      });
+    }
+    var result = {
+      room: room,
+      read: function (options) {
+        options = options || {};
+        return request('read', { after: options.after === undefined ? 0 : options.after, limit: options.limit === undefined ? 50 : options.limit }).then(function (batch) {
+          if (Number.isSafeInteger(batch.cursor)) room.lastSequence = Math.max(room.lastSequence || 0, batch.cursor);
+          return batch;
+        });
+      },
+      send: function (data, options) {
+        var key = options && options.idempotencyKey || identifier();
+        var promise = validData(data)
+          ? request('send', { data: data, idempotencyKey: key })
+          : Promise.reject(errorFrom({ code: 'ROOM_PAYLOAD_INVALID', message: 'Use finite JSON data no larger than 8192 UTF-8 bytes.' }));
+        return promise.then(function (response) { return response.message; }).catch(function (error) { error.idempotencyKey = key; throw error; });
+      },
+      subscribe: function (callback, options) {
+        options = options || {};
+        if (typeof callback !== 'function') throw new TypeError('subscribe requires a callback.');
+        if (stopSubscription) throw errorFrom({ code: 'ROOM_SUBSCRIPTION_EXISTS', message: 'Stop the current subscription before starting another.' });
+        if (stopped) throw errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' });
+        var cursor = options.after === undefined ? 0 : options.after;
+        if (!Number.isSafeInteger(cursor) || cursor < 0) throw new TypeError('after must be a nonnegative integer.');
+        var cancelled = false, timer = null, delay = 3000;
+        function stop() { cancelled = true; if (timer !== null) globalThis.clearTimeout(timer); if (stopSubscription === stop) { stopSubscription = null; subscriptionError = null; } }
+        async function poll() {
+          if (cancelled || stopped) return;
+          try {
+            var batch = await result.read({ after: cursor });
+            for (var message of batch.messages) {
+              if (cancelled || stopped) return;
+              await callback(message);
+              cursor = message.sequence;
+            }
+            cursor = Math.max(cursor, batch.cursor);
+            delay = batch.messages.length ? 3000 : Math.min(delay * 1.5, 15000);
+            delay = Math.max(delay, (batch.pollAfterSeconds || 3) * 1000);
+          } catch (error) {
+            if (cancelled || stopped) return;
+            if (['ROOM_EXPIRED', 'ROOM_NOT_FOUND', 'RELEASE_NOT_FOUND', 'ACCOUNT_SUSPENDED', 'GAME_NOT_ALLOWED', 'SCOPE_REQUIRED', 'AUTH_INVALID', 'AUTH_REQUIRED'].includes(error.code)) {
+              disconnect(error);
+              return;
+            }
+            delay = Math.max(Math.min(delay * 2, 30000), (error.retryAfterSeconds || 0) * 1000);
+            if (typeof options.onError === 'function') { try { options.onError(error); } catch (_) { /* callback cannot break cleanup */ } }
+          }
+          if (!cancelled && !stopped) timer = globalThis.setTimeout(poll, delay + Math.floor(Math.random() * 250));
+        }
+        stopSubscription = stop;
+        subscriptionError = typeof options.onError === 'function' ? options.onError : null;
+        void poll();
+        return stop;
+      },
+    };
+    if (typeof globalThis.LOB7RoomsP2P === 'function') result.connectPeer = function (options) {
+      return globalThis.LOB7RoomsP2P(result, options, function (listener) {
+        if (stopped) throw errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' });
+        disconnectListeners.add(listener);
+        return function () { disconnectListeners.delete(listener); };
+      }, { identifier: identifier, errorFrom: errorFrom, validData: validData });
+    };
+    function leaveOnExit(event) {
+      if (event.persisted) return;
+      disconnect({ code: 'ROOM_CONNECTION_CLOSED', message: 'The game document closed.' });
+    }
+    globalThis.addEventListener('pagehide', leaveOnExit);
+    return result;
+  }
+  function connect() {
+    if (active) return Promise.resolve(active);
+    if (connecting) return connecting;
+    if (globalThis.parent === globalThis) return Promise.reject(errorFrom({ code: 'ROOM_PREVIEW_REQUIRED', message: 'Open this project in its LOB7 preview and choose a room.' }));
+    connecting = new Promise(function (resolve, reject) {
+      var nonce = identifier(), requestId = identifier(), timeout, deferred;
+      function cleanup() {
+        globalThis.removeEventListener('message', receive);
+        globalThis.removeEventListener('load', ready);
+        globalThis.clearTimeout(timeout);
+        if (deferred !== undefined) globalThis.clearTimeout(deferred);
+      }
+      function receive(event) {
+        var response = event.data;
+        if (event.source !== globalThis.parent || !PARENT_ORIGINS.includes(event.origin) || !response || response.type !== 'lob7.rooms.connected'
+          || response.nonce !== nonce || response.requestId !== requestId) return;
+        cleanup();
+        if (response.error) return reject(errorFrom(response.error));
+        if (!response.room || !event.ports[0]) return reject(errorFrom({ code: 'ROOM_PROTOCOL_INVALID' }));
+        active = connection(response.room, event.ports[0]);
+        resolve(active);
+      }
+      // Run after the parent's iframe load handler has invalidated any previous document.
+      function ready() { deferred = globalThis.setTimeout(function () { PARENT_ORIGINS.forEach(function (origin) { globalThis.parent.postMessage({ type: 'lob7.rooms.connect', nonce: nonce, requestId: requestId }, origin); }); }, 0); }
+      globalThis.addEventListener('message', receive);
+      timeout = globalThis.setTimeout(function () { cleanup(); reject(errorFrom({ code: 'ROOM_BRIDGE_UNAVAILABLE', message: 'This document is not connected to the LOB7 room panel.' })); }, 8000);
+      if (globalThis.document.readyState === 'complete') ready();
+      else globalThis.addEventListener('load', ready, { once: true });
+    }).finally(function () { connecting = null; });
+    return connecting;
+  }
+  globalThis.LOB7Rooms = Object.freeze({ connect: connect });
+})();
+</script>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   STRATES — Hex 3D avec gravité et cavernes cachées.
+   Un seul fichier, vanilla JS, canvas 2D, projection isométrique.
+   Structure : règles pures (testables sous node) / assets / état /
+   flux de partie / rendu / entrées / boucle.
+   ===================================================================== */
+
+/* ===================== CONFIG ===================== */
+var SCAN_PERIODE = 8;          // tomographie tous les 8 demi-tours
+var HMAX = 4, N = 4, RESERVE_INIT = 16;
+
+var JOUEURS = {
+  A: { nom: 'Azur',   couleur: '#6ec8ff', but: 'relier l’Ouest (x=0) à l’Est (x=3)' },
+  C: { nom: 'Corail', couleur: '#ff9166', but: 'relier le Sud (y=0) au Nord (y=3)' }
+};
+
+/* Caméras isométriques fixes. u,v = coordonnées vue ; l'algorithme du
+   peintre trie par u+v+z croissant (lointain d'abord).
+   Azur : depuis l'Ouest (coin sud-ouest, faces visibles Ouest + Sud).
+   Corail : depuis le Sud (coin sud-est, faces visibles Sud + Est).
+   Les transformées signées donnent u,v ∈ [-3.5, 3.5] : toute la géométrie
+   est calculée à partir des coins transformés (aucun côté codé en dur). */
+var CAMERAS = {
+  A: { uv: function (x, y) { return [-x, -y]; }, cote: 'l’Ouest', faces: 'Ouest et Sud' },
+  C: { uv: function (x, y) { return [-y,  x]; }, cote: 'le Sud',  faces: 'Sud et Est' }
+};
+/* Côtés du plateau en coordonnées plateau (bords extérieurs du socle). */
+var COTES = [
+  { a: [-0.5, -0.5], b: [-0.5, 3.5], lab: 'O', joueur: 'A' },
+  { a: [3.5, -0.5],  b: [3.5, 3.5],  lab: 'E', joueur: 'A' },
+  { a: [-0.5, -0.5], b: [3.5, -0.5], lab: 'S', joueur: 'C' },
+  { a: [-0.5, 3.5],  b: [3.5, 3.5],  lab: 'N', joueur: 'C' }
+];
+var COINS_SOCLE = [[-0.5, -0.5], [3.5, -0.5], [3.5, 3.5], [-0.5, 3.5]];
+function bornesVue(cam) {
+  var us = [], vs = [], i, uv;
+  for (i = 0; i < 4; i++) {
+    uv = cam.uv(COINS_SOCLE[i][0], COINS_SOCLE[i][1]);
+    us.push(uv[0]); vs.push(uv[1]);
+  }
+  return { uMin: Math.min.apply(null, us), uMax: Math.max.apply(null, us),
+           vMin: Math.min.apply(null, vs), vMax: Math.max.apply(null, vs) };
+}
+
+/* =====================================================================
+   ======  RÈGLES — bloc pur (aucun accès DOM, testable sous node) ======
+   ===================================================================== */
+/*===== REGLES =====*/
+function etatInitial() {
+  var g = [];
+  for (var x = 0; x < N; x++) { g.push([]); for (var y = 0; y < N; y++) g[x].push([]); }
+  return { grille: g, reserve: { A: RESERVE_INIT, C: RESERVE_INIT },
+           joueur: 'A', demiTour: 1, scan: null, gagnant: null, simultane: false };
+}
+function hauteur(g, x, y) { return g[x][y].length; }
+
+function legalPose(e, x, y) {
+  return e.reserve[e.joueur] > 0 && hauteur(e.grille, x, y) < HMAX;
+}
+
+/* Destinations légales du cube de (x,y,z) appartenant au joueur actif :
+   colonne adjacente (±x ou ±y), sommet destination ≤ z (montée max 1),
+   hauteur max respectée. Retourne la position d'atterrissage z = h.     */
+function dests(e, x, y, z) {
+  var r = [];
+  if (e.grille[x][y][z] !== e.joueur) return r;
+  var dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  for (var i = 0; i < 4; i++) {
+    var nx = x + dirs[i][0], ny = y + dirs[i][1];
+    if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
+    var h = hauteur(e.grille, nx, ny);
+    if (h <= z && h < HMAX) r.push({ x: nx, y: ny, z: h });
+  }
+  return r;
+}
+
+/* Les trois actions mutent l'état ; la gravité est assurée par splice/push
+   (jamais de trou : une colonne est toujours un tableau dense).          */
+function poser(e, x, y) { e.grille[x][y].push(e.joueur); e.reserve[e.joueur]--; }
+function deplacer(e, x, y, z, nx, ny) {
+  var c = e.grille[x][y].splice(z, 1)[0];   // la colonne d'origine se compresse
+  e.grille[nx][ny].push(c);                  // atterrit au sommet
+}
+function miner(e, x, y, z) {
+  var c = e.grille[x][y].splice(z, 1)[0];    // retourne en réserve
+  e.reserve[c]++;                            // ... la colonne se compresse
+}
+
+/* Connexion façon Hex, adjacence 6 directions (±x, ±y, ±z), cubes du joueur p.
+   A : face Ouest (x=0) → face Est (x=3).  C : Sud (y=0) → Nord (y=3).      */
+function connecte(e, p) {
+  var g = e.grille, vus = {}, pile = [], i;
+  function cle(x, y, z) { return (x * N + y) * HMAX + z; }
+  function voisin(x, y, z) {
+    if (x < 0 || y < 0 || x >= N || y >= N || z < 0) return false;
+    return z < hauteur(g, x, y) && g[x][y][z] === p;
+  }
+  for (var x = 0; x < N; x++) for (var y = 0; y < N; y++) {
+    var h = hauteur(g, x, y);
+    for (var z = 0; z < h; z++) {
+      if (g[x][y][z] !== p) continue;
+      if ((p === 'A' && x === 0) || (p === 'C' && y === 0)) {
+        var k = cle(x, y, z);
+        if (!vus[k]) { vus[k] = true; pile.push([x, y, z]); }
+      }
+    }
+  }
+  while (pile.length) {
+    var c = pile.pop();
+    if ((p === 'A' && c[0] === N - 1) || (p === 'C' && c[1] === N - 1)) return true;
+    var cand = [[c[0]+1,c[1],c[2]],[c[0]-1,c[1],c[2]],[c[0],c[1]+1,c[2]],[c[0],c[1]-1,c[2]],[c[0],c[1],c[2]+1],[c[0],c[1],c[2]-1]];
+    for (i = 0; i < 6; i++) {
+      var q = cand[i];
+      if (voisin(q[0], q[1], q[2])) {
+        var k2 = cle(q[0], q[1], q[2]);
+        if (!vus[k2]) { vus[k2] = true; pile.push([q[0], q[1], q[2]]); }
+      }
+    }
+  }
+  return false;
+}
+
+/* Après chaque action (effondrements compris). Simultané → joueur actif. */
+function verifConnexions(e) {
+  var a = connecte(e, 'A'), c = connecte(e, 'C');
+  if (a && c) { e.simultane = true; return e.joueur; }
+  if (a) return 'A';
+  if (c) return 'C';
+  return null;
+}
+/*===== FIN REGLES =====*/
+
+/* =====================================================================
+   ======  OCCULTATION — test de visibilité (réutilise le peintre) ======
+   =====================================================================
+   Même projection (P, coinsCube), même tri du peintre (u+v+z croissant)
+   et même test d'atteinte que le rendu et les clics (pointDansPoly, du
+   plus proche au plus lointain). Un cube est « visible » depuis la
+   caméra si un point-échantillon touche l'une de ses trois faces avant
+   toute face plus proche : exactement ce qu'un joueur voit et peut
+   cliquer. Layout virtuel fixe, indépendant de la fenêtre. */
+function cubesVisibles(cam, grille) {
+  var items = [], x, y, z, i, f;
+  for (x = 0; x < N; x++) for (y = 0; y < N; y++) {
+    var col = grille[x][y];
+    for (z = 0; z < col.length; z++) {
+      var uv = cam.uv(x, y);
+      items.push({ x: x, y: y, z: z, u: uv[0], v: uv[1] });
+    }
+  }
+  items.sort(function (a, b) { return (a.u + a.v + a.z) - (b.u + b.v + b.z); });
+  var LReel = L;
+  L = { tw: 48, th: 24, ch: 48, ox: 340, oy: 300, W: 680, H: 600 };
+  try {
+    var faces = [], minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    for (i = 0; i < items.length; i++) {
+      var it = items[i], o = coinsCube(it.u, it.v, it.z);
+      var k = it.x + ',' + it.y + ',' + it.z;
+      var fs = [[o.TF, o.TR, o.TN, o.TG], [o.TR, o.TN, o.BN, o.BR], [o.TG, o.TF, o.BF, o.BG]];
+      for (f = 0; f < 3; f++) {
+        faces.push({ p: fs[f], k: k });
+        for (var pt = 0; pt < 4; pt++) {
+          var q = fs[f][pt];
+          if (q.x < minX) minX = q.x; if (q.x > maxX) maxX = q.x;
+          if (q.y < minY) minY = q.y; if (q.y > maxY) maxY = q.y;
+        }
+      }
+    }
+    var vis = {}, pas = 2;
+    for (var py = Math.floor(minY); py <= maxY; py += pas) {
+      for (var px = Math.floor(minX); px <= maxX; px += pas) {
+        for (var j = faces.length - 1; j >= 0; j--) {
+          if (pointDansPoly(px, py, faces[j].p)) { vis[faces[j].k] = 1; break; }
+        }
+      }
+    }
+    return vis;
+  } finally { L = LReel; }
+}
+
+/* ======  DISTANCE DE CONNEXION — heuristique Hex (0-1 BFS)  ======
+   Sur une grille de connaissances : cubes du joueur p (coût 0, déjà
+   posés), air (z >= hauteur, coût 1 : il faudra y poser un cube), murs
+   = tout le reste (adversaire vu, ou 'X' inconnu). p='C' relie y=0 →
+   y=3 ; p='A' relie x=0 → x=3. Retour : nombre minimal de poses pour
+   boucler la chaîne (Infinity si scellé). */
+function distanceHex(g, p) {
+  var INF = 255, d = [], tete = [], queue = [], i, a, z;
+  for (i = 0; i < N * N * HMAX; i++) d.push(INF);
+  function idx(x, y, z) { return (x * N + y) * HMAX + z; }
+  function cout(x, y, z) {
+    var h = g[x][y].length;
+    if (z < h) return g[x][y][z] === p ? 0 : null;   // cube : à soi ou mur
+    return 1;                                        // air posable
+  }
+  for (a = 0; a < N; a++) for (z = 0; z < HMAX; z++) {
+    var x0 = (p === 'A') ? 0 : a, y0 = (p === 'A') ? a : 0;
+    var c = cout(x0, y0, z);
+    if (c === null) continue;
+    var id0 = idx(x0, y0, z);
+    if (c < d[id0]) { d[id0] = c; (c === 0 ? tete : queue).push(id0); }
+  }
+  var DIRS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+  while (tete.length || queue.length) {
+    var cur = tete.length ? tete.pop() : queue.shift();
+    var cz = cur % HMAX, cxy = (cur - cz) / HMAX, cy = cxy % N, cx = (cxy - cy) / N;
+    for (i = 0; i < 6; i++) {
+      var nx = cx + DIRS[i][0], ny = cy + DIRS[i][1], nz = cz + DIRS[i][2];
+      if (nx < 0 || ny < 0 || nx >= N || ny >= N || nz < 0 || nz >= HMAX) continue;
+      var cc = cout(nx, ny, nz);
+      if (cc === null) continue;
+      var nid = idx(nx, ny, nz);
+      if (d[cur] + cc < d[nid]) { d[nid] = d[cur] + cc; (cc === 0 ? tete : queue).push(nid); }
+    }
+  }
+  var best = INF;
+  for (a = 0; a < N; a++) for (z = 0; z < HMAX; z++) {
+    var x1 = (p === 'A') ? N - 1 : a, y1 = (p === 'A') ? a : N - 1;
+    if (d[idx(x1, y1, z)] < best) best = d[idx(x1, y1, z)];
+  }
+  return best >= INF ? Infinity : best;
+}
+
+/* =====================================================================
+   ======  IA DE CORAIL — honnête, deux niveaux                  ======
+   =====================================================================
+   Connaissances : ses cubes partout (positions réelles) ; les cubes
+   adverses uniquement s'ils sont visibles depuis SA caméra (le Sud) ou
+   révélés par la tomographie active pendant son tour. Le reste est
+   marqué 'X' — présence déduite des hauteurs publiques (colonne pleine
+   sans trou), couleur ignorée : jamais utilisée comme position adverse.
+   La légalité est calculée sur l'état réel via des informations
+   publiques ou propres uniquement ; l'évaluation se fait sur la grille
+   de connaissances. */
+var IA_NIVEAU = 'normal';    // 'facile' | 'normal' — réglé par l'accueil
+
+function clonerGrille(g) {
+  var r = [], x, y;
+  for (x = 0; x < N; x++) { r.push([]); for (y = 0; y < N; y++) r[x].push(g[x][y].slice()); }
+  return r;
+}
+
+function grilleConnaissanceIA() {
+  var vis = cubesVisibles(CAMERAS.C, S.grille);
+  var g = [], x, y, z;
+  for (x = 0; x < N; x++) { g.push([]); for (y = 0; y < N; y++) {
+    var col = S.grille[x][y], k = [];
+    for (z = 0; z < col.length; z++) {
+      if (col[z] === 'C') k.push('C');
+      else if (vis[x + ',' + y + ',' + z] || (S.scan && z === S.scan.z)) k.push('A');
+      else k.push('X');
+    }
+    g[x].push(k);
+  } }
+  return g;
+}
+
+/* Légalité : poses (réserve + hauteur publique), déplacements et minages
+   sur les cubes propres — aucune consultation des cubes adverses. */
+function enumererActionsIA() {
+  var acts = [], x, y, z, i;
+  if (S.reserve.C > 0) {
+    for (x = 0; x < N; x++) for (y = 0; y < N; y++)
+      if (hauteur(S.grille, x, y) < HMAX) acts.push({ kind: 'pose', x: x, y: y });
+  }
+  for (x = 0; x < N; x++) for (y = 0; y < N; y++) {
+    var col = S.grille[x][y];
+    for (z = 0; z < col.length; z++) {
+      if (col[z] !== 'C') continue;
+      var ds = dests(S, x, y, z);
+      for (i = 0; i < ds.length; i++)
+        acts.push({ kind: 'deplace', x: x, y: y, z: z, nx: ds[i].x, ny: ds[i].y });
+      acts.push({ kind: 'mine', x: x, y: y, z: z });
+    }
+  }
+  return acts;
+}
+
+function cap99(d) { return d === Infinity ? 99 : d; }
+function evaluerConnaissance(g) {   // distances des deux camps sur la connaissance
+  return { dC: distanceHex(g, 'C'), dA: distanceHex(g, 'A') };
+}
+
+function choisirActionIA() {
+  var acts = enumererActionsIA();
+  if (!acts.length) return null;
+  if (IA_NIVEAU === 'facile' && Math.random() < 0.6)
+    return acts[Math.floor(Math.random() * acts.length)];
+  var K = grilleConnaissanceIA();
+  var base = evaluerConnaissance(K);
+  var meilleurs = [], scoreMax = -Infinity;
+  for (var i = 0; i < acts.length; i++) {
+    var a = acts[i];
+    var e2 = { grille: clonerGrille(K), reserve: { A: S.reserve.A, C: S.reserve.C }, joueur: 'C' };
+    if (a.kind === 'pose') poser(e2, a.x, a.y);
+    else if (a.kind === 'deplace') deplacer(e2, a.x, a.y, a.z, a.nx, a.ny);
+    else miner(e2, a.x, a.y, a.z);
+    var ap = evaluerConnaissance(e2.grille);
+    var s = 2.2 * (cap99(ap.dA) - cap99(base.dA))    // bloquer le chemin adverse VISIBLE
+          + 2.4 * (cap99(base.dC) - cap99(ap.dC));   // rapprocher sa propre connexion
+    if (connecte(e2, 'C')) s += 1000;                // victoire simulée (sur SES cubes)
+    var hz = 0, mob = 0;                             // léger bonus hauteur / mobilité
+    for (var x = 0; x < N; x++) for (var y = 0; y < N; y++) {
+      var col = e2.grille[x][y];
+      for (var z = 0; z < col.length; z++) if (col[z] === 'C') {
+        hz += z;
+        mob += dests(e2, x, y, z).length;
+      }
+    }
+    s += 0.02 * hz + 0.008 * mob;
+    if (a.kind === 'mine') s -= 0.12;                // le minage gratuit est découragé
+    if (s > scoreMax + 1e-9) { scoreMax = s; meilleurs = [a]; }
+    else if (s > scoreMax - 1e-9) meilleurs.push(a);
+  }
+  return meilleurs[Math.floor(Math.random() * meilleurs.length)];
+}
+
+function appliquerActionIA(a) {
+  if (a.kind === 'pose') poser(S, a.x, a.y);
+  else if (a.kind === 'deplace') deplacer(S, a.x, a.y, a.z, a.nx, a.ny);
+  else if (a.kind === 'mine') miner(S, a.x, a.y, a.z);
+  terminerTour();
+}
+
+/* Tour IA : pas d'écran de passage, « L'IA réfléchit… » ~800 ms, puis
+   action appliquée avec le rendu et le flux normaux. */
+function lancerTourIA() {
+  S.phase = 'iaReflechi';
+  majHUD();
+  setTimeout(function () {
+    if (MODE !== 'ia' || S.phase !== 'iaReflechi' || S.joueur !== 'C') return;
+    var a = choisirActionIA();
+    if (a) appliquerActionIA(a);
+    else terminerTour();          // sécurité : aucune action légale
+  }, 750 + Math.floor(Math.random() * 350));
+}
+
+/* ===================== ASSETS (couche optionnelle) =====================
+   Chargement dynamique de assets/manifest.js via <script src> (compatible
+   file://). asset(id) → image prête, ou null (rendu vectoriel de secours).
+   Ids consommés : strates/texture/azur|corail|neutre, common/icone_scan,
+   common/fond. Textures plaquées par drawImage + setTransform (carré →
+   parallélogramme de face). Mode débrayable via le bouton « Textures ». */
+var Assets = {
+  entrees: {}, actif: true, manifestAbsent: false,
+  init: function () {
+    var s = document.createElement('script');
+    var self = this;
+    s.src = 'assets/manifest.js';
+    s.onload = function () { self.traiter(); };
+    s.onerror = function () {
+      self.manifestAbsent = true;
+      var b = document.getElementById('btnTextures');
+      b.classList.add('discret');
+      b.title = 'Aucun assets/manifest.js trouvé à côté du jeu — rendu vectoriel.';
+    };
+    document.head.appendChild(s);
+  },
+  traiter: function () {
+    var m = window.ASSETS_MANIFEST;
+    if (!m || !m.assets) { this.manifestAbsent = true; return; }
+    for (var i = 0; i < m.assets.length; i++) {
+      var a = m.assets[i];
+      var fichier = null;
+      if (a.variants && a.variants.length) {
+        var tri = a.variants.slice().sort(function (p, q) { return p.px - q.px; });
+        var choisi = tri[tri.length - 1];
+        for (var j = 0; j < tri.length; j++) if (tri[j].px >= 512) { choisi = tri[j]; break; }
+        fichier = choisi.file;
+      } else if (a.file) fichier = a.file;
+      if (!fichier) continue;
+      (function (id, src) {
+        var img = new Image();
+        img.onload = function () { Assets.entrees[id] = img; majHUD(); };
+        img.src = src;
+      })(a.id, 'assets/' + fichier);
+    }
+  },
+  asset: function (id) { return (this.actif && this.entrees[id]) || null; }
+};
+
+/* ===================== ÉTAT (séparé du rendu) ===================== */
+var S = etatInitial();
+S.phase = 'passage';      // 'passage' | 'jeu' | 'fin'
+S.selection = null;       // {x,y,z} cube sélectionné du joueur actif
+S.dests = [];             // destinations mises en cache de la sélection
+S.camFin = 'A';           // caméra utilisée sur l'écran de fin
+S.egaliteNote = false;
+
+var MODE = null;          // null (accueil) | 'local' | 'ia' | 'enligne'
+
+var cv = document.getElementById('vue');
+var ctx = cv.getContext('2d');
+var mm = document.getElementById('minimap');
+var mctx = mm.getContext('2d');
+var L = { tw: 44, th: 22, ch: 44, ox: 0, oy: 0, W: 0, H: 0 };
+var UIK = 1;   // facteur d'échelle UI (racine CSS / 16 px) — lisibilité grands écrans
+var hits = [];            // faces dessinées cette frame (hit-test)
+var souris = { x: -1, y: -1 };
+var survol = null;
+
+function cameraActive() {
+  if (S.phase === 'fin') return S.camFin;
+  if (MODE === 'ia') return 'A';                    // le humain garde toujours SA caméra
+  if (MODE === 'enligne' && NET.moi) return NET.moi; // chacun garde SA caméra, toujours
+  return S.joueur;
+}
+
+/* ===================== HUD / SURIMPRESSIONS DOM ===================== */
+function $(id) { return document.getElementById(id); }
+
+function toast(txt, duree) {
+  var t = $('toast');
+  t.textContent = txt;
+  t.classList.add('visible');
+  clearTimeout(toast._h);
+  toast._h = setTimeout(function () { t.classList.remove('visible'); }, duree || 2200);
+}
+
+function majHUD() {
+  var j = S.joueur, J = JOUEURS[j];
+  var tour = $('tourLigne');
+  if (S.phase === 'fin' && S.gagnant) {
+    tour.innerHTML = 'Victoire <span class="' + (S.gagnant === 'A' ? 'azurC' : 'corailC') + '">' +
+      (S.gagnant === 'A' ? 'de l’Azur' : 'du Corail') + '</span>';
+  } else if (MODE === 'ia' && j === 'C') {
+    tour.innerHTML = 'Au tour <span class="corailC">de l’IA (Corail)</span>';
+  } else {
+    tour.innerHTML = 'Au tour <span class="' + (j === 'A' ? 'azurC' : 'corailC') + '">' +
+      (j === 'A' ? 'd’Azur' : 'du Corail') + '</span>';
+  }
+  var modeTxt = '';
+  if (MODE === 'ia') modeTxt = ' — contre l’IA (' + IA_NIVEAU + ')';
+  else if (MODE === 'enligne') modeTxt = ' — en ligne, tu es ' + (NET.moi === 'A' ? 'Azur' : 'Corail');
+  $('dtLigne').textContent = 'Demi-tour ' + S.demiTour + modeTxt;
+  $('iaBadge').classList.toggle('cache', !(MODE === 'ia' && S.phase === 'iaReflechi'));
+  $('btnQuitterSalon').classList.toggle('cache', MODE !== 'enligne');
+  $('btnNouvelle').classList.toggle('cache', MODE === 'enligne');
+  $('resA').textContent = S.reserve.A;
+  $('resC').textContent = S.reserve.C;
+
+  var sl = $('scanLigne');
+  sl.classList.toggle('actif', !!S.scan);
+  var ico = '<svg viewBox="0 0 24 24" fill="none" stroke="#f3e5d0" stroke-width="1.6">' +
+    '<circle cx="12" cy="12" r="2.2" fill="#f3e5d0" stroke="none"/>' +
+    '<path d="M12 12 L19 5"/><path d="M12 3a9 9 0 0 1 9 9" opacity=".9"/>' +
+    '<path d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5" opacity=".55"/></svg>';
+  var im = Assets.asset('common/icone_scan');
+  if (im) ico = '<img src="' + im.src + '" alt="scan">';
+  sl.innerHTML = '<span id="icoScan">' + ico + '</span><span>' +
+    (S.scan ? 'Tomographie ACTIVE — radiographie de la couche z=' + S.scan.z
+            : 'Tomographie : dans ' + (SCAN_PERIODE - (S.demiTour % SCAN_PERIODE)) + ' demi-tour' +
+              ((SCAN_PERIODE - (S.demiTour % SCAN_PERIODE)) > 1 ? 's' : '')) + '</span>';
+
+  $('vueLigne').textContent = 'Vue : depuis ' + CAMERAS[cameraActive()].cote +
+    ' (faces ' + CAMERAS[cameraActive()].faces + ')';
+  majBarre();
+}
+
+function majBarre() {
+  var b = $('barre');
+  $('btnMiner').style.display = 'none';
+  $('btnAnnuler').style.display = 'none';
+  $('btnVue').style.display = 'none';
+  $('btnRejouerFin').style.display = 'none';
+  b.classList.remove('avecSelection');
+  if (S.phase === 'fin') {
+    $('txtAction').textContent = 'Partie terminée — libre inspection des deux points de vue.';
+    $('btnVue').style.display = '';
+    $('btnRejouerFin').style.display = '';
+  } else if (S.phase === 'attente') {
+    $('txtAction').textContent = 'Au tour de l’adversaire — seule sa vue visible change, patience…';
+  } else if (S.phase === 'iaReflechi') {
+    $('txtAction').textContent = 'L’IA réfléchit…';
+  } else if (S.selection) {
+    $('txtAction').textContent = 'Déplace ce cube vers un fantôme cuivré — ou mine-le (il rentre en réserve).';
+    $('btnMiner').style.display = '';
+    $('btnAnnuler').style.display = '';
+    b.classList.add('avecSelection');
+  } else {
+    $('txtAction').innerHTML = 'POSER : clique le sol ou le <i>dessus</i> d’une colonne &nbsp;·&nbsp; ' +
+      'DÉPLACER : clique ton cube (face latérale) &nbsp;·&nbsp; MINER : double-clic, touche M, ou bouton';
+  }
+}
+
+/* ===================== FLUX DE PARTIE ===================== */
+function nouvellePartie() {
+  if (!MODE) MODE = 'local';
+  S = etatInitial();
+  S.selection = null; S.dests = []; S.camFin = 'A';
+  souris.x = -1; souris.y = -1; survol = null;
+  $('victoire').classList.add('cache');
+  if (MODE === 'enligne') {
+    if (NET.moi === 'A') relancerPartieEnLigne();
+    else {
+      netEnvoyer({ type: 'rejouer', clientId: NET.monId });
+      S.phase = 'attente'; S.joueur = 'A';
+      toast('Demande de revanche envoyée à l’hôte…');
+      majHUD();
+    }
+    return;
+  }
+  if (MODE === 'ia') {
+    S.phase = 'jeu';
+    toast('Tu es Azur — l’IA (' + IA_NIVEAU + ') joue Corail depuis le Sud.', 3200);
+    majHUD();
+    return;
+  }
+  S.phase = 'passage';
+  afficherPassage();
+  majHUD();
+}
+
+function afficherPassage() {
+  var j = S.joueur, J = JOUEURS[j];
+  $('passNom').textContent = (j === 'A' ? 'Azur' : 'Corail');
+  $('passNom').style.color = J.couleur;
+  var d = 'Tu dois ' + J.but + ' par une chaîne de cubes tangents.';
+  d += ' Ta caméra est fixe, depuis ' + CAMERAS[j].cote + ' : tu vois les faces ' + CAMERAS[j].faces + ', rien d’autre.';
+  $('passDetail').textContent = d;
+  var notes = [];
+  if (S.demiTour === 1) notes.push('Le plateau est vide — Azur commence.');
+  if (S.scan) notes.push('Tomographie ce tour : la couche z=' + S.scan.z +
+    ' sera révélée en radiographie, même à travers les cubes.');
+  $('passNote').innerHTML = notes.join('<br>');
+  $('passage').classList.remove('cache');
+}
+
+function commencerTour() {
+  $('passage').classList.add('cache');
+  S.phase = 'jeu';
+  majHUD();
+  if (S.scan) toast('Tomographie — couche z=' + S.scan.z + ' révélée pendant ce tour.', 3400);
+}
+
+function toastScan() {
+  if (S.scan) toast('Tomographie — couche z=' + S.scan.z + ' révélée pendant ce tour.', 3400);
+}
+
+function terminerTour() {
+  var g = verifConnexions(S);
+  if (g) {
+    S.gagnant = g; S.phase = 'fin'; S.camFin = g;
+    S.selection = null; S.dests = [];
+    if (MODE === 'enligne' && NET.moi === 'A') envoyerFin();
+    afficherVictoire();
+    majHUD();
+    return;
+  }
+  S.demiTour++;
+  S.joueur = S.joueur === 'A' ? 'C' : 'A';
+  S.scan = (S.demiTour % SCAN_PERIODE === 0)
+    ? { z: Math.floor(Math.random() * HMAX), dt: S.demiTour }
+    : null;
+  S.selection = null; S.dests = [];
+  if (MODE === 'local' || !MODE) {
+    S.phase = 'passage';
+    afficherPassage();
+  } else if (MODE === 'ia') {
+    if (S.joueur === 'C') lancerTourIA();
+    else { S.phase = 'jeu'; toastScan(); }
+  } else if (MODE === 'enligne' && NET.moi === 'A') {
+    S.phase = (S.joueur === 'A') ? 'jeu' : 'attente';
+    if (S.phase === 'jeu') toastScan();
+    diffuserVue();
+  }
+  majHUD();
+}
+
+function afficherVictoire() {
+  var J = JOUEURS[S.gagnant];
+  $('vicNom').textContent = 'Victoire ' + (S.gagnant === 'A' ? 'de l’Azur' : 'du Corail');
+  $('vicNom').style.color = J.couleur;
+  $('vicDetail').textContent = (S.gagnant === 'A' ? 'L’Azur relie l’Ouest à l’Est' : 'Le Corail relie le Sud au Nord') +
+    ' par une chaîne de cubes tangents face à face — après ' + S.demiTour + ' demi-tours.';
+  $('vicNote').textContent = S.simultane
+    ? 'Connexions simultanées : la victoire revient au joueur actif.'
+    : 'L’occultation a joué son rôle jusqu’au bout.';
+  $('victoire').classList.remove('cache');
+}
+
+function selectionner(x, y, z) {
+  S.selection = { x: x, y: y, z: z };
+  S.dests = dests(S, x, y, z);
+  if (!S.dests.length) toast('Aucun déplacement légal — tu peux encore miner ce cube.');
+  majBarre();
+}
+function deselectionner() {
+  S.selection = null; S.dests = [];
+  majBarre();
+}
+
+/* actions déclenchées par les clics.
+   En ligne, Corail n'applique jamais les règles : coup envoyé à l'arbitre
+   (Azur), application locale optimiste puis resynchronisation par la vue. */
+function actionPoser(x, y) {
+  if (!legalPose(S, x, y)) {
+    if (S.reserve[S.joueur] <= 0) toast('Réserve épuisée.');
+    else toast('Colonne pleine (hauteur ' + HMAX + ').');
+    return;
+  }
+  if (MODE === 'enligne' && NET.moi === 'C') {
+    corailJoue({ kind: 'pose', x: x, y: y }, function () { poser(S, x, y); });
+    return;
+  }
+  poser(S, x, y);
+  terminerTour();
+}
+function actionDeplacer(d) {
+  var ok = false, i;
+  for (i = 0; i < S.dests.length; i++)
+    if (S.dests[i].x === d.x && S.dests[i].y === d.y) ok = true;
+  if (!ok) return;
+  var s = S.selection;
+  if (MODE === 'enligne' && NET.moi === 'C') {
+    corailJoue({ kind: 'deplace', x: s.x, y: s.y, z: s.z, nx: d.x, ny: d.y },
+               function () { deplacer(S, s.x, s.y, s.z, d.x, d.y); });
+    return;
+  }
+  deplacer(S, S.selection.x, S.selection.y, S.selection.z, d.x, d.y);
+  terminerTour();
+}
+function actionMiner() {
+  if (!S.selection) return;
+  var s = S.selection;
+  if (MODE === 'enligne' && NET.moi === 'C') {
+    corailJoue({ kind: 'mine', x: s.x, y: s.y, z: s.z },
+               function () { miner(S, s.x, s.y, s.z); });
+    return;
+  }
+  miner(S, s.x, s.y, s.z);
+  terminerTour();
+}
+
+/* ===================== PROJECTION & LAYOUT ===================== */
+function P(u, v, z) {
+  return { x: L.ox + (u - v) * L.tw, y: L.oy + (u + v) * L.th - z * L.ch };
+}
+function calculerLayout() {
+  var W = window.innerWidth, H = window.innerHeight;
+  /* Marges et plafond proportionnels (plus de plafonds fixes) : le plateau
+     occupe davantage l'écran sur les grandes résolutions. Seules les échelles
+     d'affichage bougent — la géométrie de projection reste inchangée. */
+  var margeHaut = Math.max(104, H * 0.16);
+  var margeBas = Math.max(90, H * 0.12);
+  var dispoW = W - Math.max(50, W * 0.045), dispoH = H - margeHaut - margeBas;
+  var twMax = Math.max(114, Math.min(W, H) * 0.155);
+  var tw = Math.max(15, Math.min(twMax, Math.min(dispoW / 8.7, dispoH / 8.7)));
+  var cam = CAMERAS[cameraActive()];
+  var b = bornesVue(cam);
+  var midUDif = (b.uMin + b.uMax - b.vMin - b.vMax) / 2;
+  var midSomme = (b.uMin + b.uMax + b.vMin + b.vMax) / 2;
+  L = { tw: tw, th: tw / 2, ch: tw, W: W, H: H };
+  L.ox = W / 2 - midUDif * L.tw;
+  L.oy = (margeHaut + (H - margeBas)) / 2 - midSomme * L.th + 1.5 * L.ch;
+}
+
+/* mélange vers blanc (k>0) ou noir (k<0) */
+function melange(hex, k) {
+  var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  function f(c) { return Math.round(k >= 0 ? c + (255 - c) * k : c * (1 + k)); }
+  return 'rgb(' + f(r) + ',' + f(g) + ',' + f(b) + ')';
+}
+var TEINTES = {
+  A: { haut: melange('#6ec8ff', 0.34), droite: melange('#6ec8ff', -0.20), gauche: melange('#6ec8ff', -0.44),
+       rayon: '#b9e2ff' },
+  C: { haut: melange('#ff9166', 0.30), droite: melange('#ff9166', -0.22), gauche: melange('#ff9166', -0.46),
+       rayon: '#ffc9ac' }
+};
+
+/* ===================== RENDU ===================== */
+function poly(c, pts) {
+  c.beginPath();
+  c.moveTo(pts[0].x, pts[0].y);
+  for (var i = 1; i < pts.length; i++) c.lineTo(pts[i].x, pts[i].y);
+  c.closePath();
+}
+function remplir(c, pts, style) { poly(c, pts); c.fillStyle = style; c.fill(); }
+function tracer(c, pts, style, w) { poly(c, pts); c.strokeStyle = style; c.lineWidth = w || 1; c.stroke(); }
+/* épaisseur de trait mise à l'échelle UI (identique à la valeur brute sur petit écran) */
+function ep(w) { return Math.max(1, w * UIK); }
+
+/* plaque une texture carrée sur une face-parallélogramme [O, O+A, O+A+B, O+B] */
+function textureFace(c, img, pts) {
+  var ax = pts[1].x - pts[0].x, ay = pts[1].y - pts[0].y;
+  var bx = pts[3].x - pts[0].x, by = pts[3].y - pts[0].y;
+  c.save();
+  c.transform(ax, ay, bx, by, pts[0].x, pts[0].y);
+  c.drawImage(img, 0, 0, 1, 1);
+  c.restore();
+}
+
+/* facteur racine CSS (clamp 14→27 px) ramené à la base 16 px */
+function facteurUI() {
+  var racine = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  return racine > 0 ? racine / 16 : 1;
+}
+function ajusterCanvas() {
+  var dpr = window.devicePixelRatio || 1;
+  var W = window.innerWidth, H = window.innerHeight;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  UIK = facteurUI();
+  /* minimap agrandie avec l'UI (le rendu reste calculé en 196×128 logiques) */
+  var mw = Math.round(196 * UIK), mh = Math.round(128 * UIK);
+  if (mm.width !== Math.round(mw * dpr)) {
+    mm.width = Math.round(mw * dpr); mm.height = Math.round(mh * dpr);
+    mm.style.width = mw + 'px'; mm.style.height = mh + 'px';
+  }
+  mctx.setTransform(dpr * UIK, 0, 0, dpr * UIK, 0, 0);
+}
+
+function dessinerFond() {
+  var W = L.W, H = L.H, img = Assets.asset('common/fond');
+  /* fond Canyon : brun-violet sombre, léger dégradé vertical vers #3a1f1c */
+  var fond = ctx.createLinearGradient(0, 0, 0, H);
+  fond.addColorStop(0, '#241318'); fond.addColorStop(1, '#3a1f1c');
+  if (img) {
+    var s = Math.max(W / img.width, H / img.height);
+    ctx.drawImage(img, (W - img.width * s) / 2, (H - img.height * s) / 2, img.width * s, img.height * s);
+    ctx.fillStyle = 'rgba(36,19,24,.45)';
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    ctx.fillStyle = fond;
+    ctx.fillRect(0, 0, W, H);
+    var g1 = ctx.createRadialGradient(W * 0.24, H * 0.26, 0, W * 0.24, H * 0.26, W * 0.55);
+    g1.addColorStop(0, 'rgba(110,200,255,.055)'); g1.addColorStop(1, 'rgba(110,200,255,0)');
+    ctx.fillStyle = g1; ctx.fillRect(0, 0, W, H);
+    var g2 = ctx.createRadialGradient(W * 0.8, H * 0.78, 0, W * 0.8, H * 0.78, W * 0.6);
+    g2.addColorStop(0, 'rgba(255,145,102,.045)'); g2.addColorStop(1, 'rgba(255,145,102,0)');
+    ctx.fillStyle = g2; ctx.fillRect(0, 0, W, H);
+  }
+  var v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.36, W / 2, H / 2, Math.max(W, H) * 0.75);
+  v.addColorStop(0, 'rgba(16,8,10,0)'); v.addColorStop(1, 'rgba(13,6,8,.55)');
+  ctx.fillStyle = v; ctx.fillRect(0, 0, W, H);
+}
+
+/* construit la liste triée (peintre) des cubes + fantômes */
+function construireItems(cam) {
+  var items = [], x, y, z, uv;
+  for (x = 0; x < N; x++) for (y = 0; y < N; y++) {
+    var col = S.grille[x][y];
+    for (z = 0; z < col.length; z++) {
+      if (col[z] === 'X') continue;   // cube caché (vue partielle en ligne) : jamais rendu
+      uv = cam.uv(x, y);
+      items.push({ type: 'cube', x: x, y: y, z: z, u: uv[0], v: uv[1], couleur: col[z] });
+    }
+  }
+  for (var i = 0; i < S.dests.length; i++) {
+    var d = S.dests[i];
+    uv = cam.uv(d.x, d.y);
+    items.push({ type: 'fantome', x: d.x, y: d.y, z: d.z, u: uv[0], v: uv[1] });
+  }
+  items.sort(function (a, b) { return (a.u + a.v + a.z) - (b.u + b.v + b.z); });
+  return items;
+}
+
+function coinsCube(u, v, z) {
+  var c = P(u, v, z);
+  return {
+    TF: { x: c.x, y: c.y - (L.th + L.ch / 2) }, TR: { x: c.x + L.tw, y: c.y - L.ch / 2 },
+    TN: { x: c.x, y: c.y + L.th - L.ch / 2 }, TG: { x: c.x - L.tw, y: c.y - L.ch / 2 },
+    BF: { x: c.x, y: c.y - L.th + L.ch / 2 }, BR: { x: c.x + L.tw, y: c.y + L.ch / 2 },
+    BN: { x: c.x, y: c.y + L.th + L.ch / 2 }, BG: { x: c.x - L.tw, y: c.y + L.ch / 2 }
+  };
+}
+
+function dessinerCube(item, cam, t) {
+  var o = coinsCube(item.u, item.v, item.z);
+  var haut = [o.TF, o.TR, o.TN, o.TG];
+  var droite = [o.TR, o.TN, o.BN, o.BR];
+  var gauche = [o.TG, o.TF, o.BF, o.BG];
+  var silh = [o.TF, o.TR, o.BR, o.BN, o.BG, o.TG];
+  var T = TEINTES[item.couleur];
+  var tex = Assets.asset('strates/texture/' + (item.couleur === 'A' ? 'azur' : 'corail'));
+  var sel = S.selection && S.selection.x === item.x && S.selection.y === item.y && S.selection.z === item.z;
+  var pulse = 0.62 + 0.38 * Math.sin(t / 260);
+
+  /* faces pleines (vectorielles, ou texture + voile d'ombrage) */
+  if (tex) {
+    textureFace(ctx, tex, haut);    ctx.fillStyle = 'rgba(255,255,255,.14)'; poly(ctx, haut); ctx.fill();
+    textureFace(ctx, tex, droite);  ctx.fillStyle = 'rgba(40,22,16,.22)';    poly(ctx, droite); ctx.fill();
+    textureFace(ctx, tex, gauche);  ctx.fillStyle = 'rgba(40,22,16,.44)';    poly(ctx, gauche); ctx.fill();
+  } else {
+    remplir(ctx, haut, T.haut);
+    remplir(ctx, droite, T.droite);
+    remplir(ctx, gauche, T.gauche);
+  }
+  /* arêtes nettes — les cubes empilés dessinent leurs strates */
+  tracer(ctx, haut, 'rgba(46,26,20,.75)', ep(1));
+  tracer(ctx, droite, 'rgba(46,26,20,.75)', ep(1));
+  tracer(ctx, gauche, 'rgba(46,26,20,.75)', ep(1));
+  tracer(ctx, [o.TG, o.TF], 'rgba(243,229,208,.3)', ep(1));       // lumière rasante
+  if (sel) {
+    ctx.save();
+    ctx.shadowColor = JOUEURS[item.couleur].couleur; ctx.shadowBlur = 12 * UIK;
+    ctx.strokeStyle = 'rgba(243,229,208,' + pulse.toFixed(2) + ')';
+    ctx.lineWidth = ep(2.4); ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(silh[0].x, silh[0].y);
+    for (var i = 1; i < 6; i++) ctx.lineTo(silh[i].x, silh[i].y);
+    ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+  /* hit-test : les trois faces (remplies, donc visibles a priori) */
+  hits.push({ poly: haut, kind: 'cube', x: item.x, y: item.y, z: item.z, face: 'haut' });
+  hits.push({ poly: droite, kind: 'cube', x: item.x, y: item.y, z: item.z, face: 'droite' });
+  hits.push({ poly: gauche, kind: 'cube', x: item.x, y: item.y, z: item.z, face: 'gauche' });
+}
+
+function dessinerFantome(item, cam, t) {
+  var o = coinsCube(item.u, item.v, item.z);
+  var haut = [o.TF, o.TR, o.TN, o.TG];
+  var silh = [o.TF, o.TR, o.BR, o.BN, o.BG, o.TG];
+  var hov = survol && survol.kind === 'fantome' && survol.x === item.x && survol.y === item.y;
+  var pulse = 0.55 + 0.3 * Math.sin(t / 300);
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(silh[0].x, silh[0].y);
+  for (var i = 1; i < 6; i++) ctx.lineTo(silh[i].x, silh[i].y);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(' + (S.joueur === 'A' ? '110,200,255' : '255,145,102') + ',' + (hov ? 0.26 : 0.14) + ')';
+  ctx.fill();
+  ctx.setLineDash([7 * UIK, 5 * UIK]);
+  ctx.strokeStyle = hov ? JOUEURS[S.joueur].couleur : 'rgba(217,142,74,' + pulse.toFixed(2) + ')';
+  ctx.lineWidth = hov ? ep(2.4) : ep(1.6);
+  ctx.stroke();
+  poly(ctx, haut);
+  ctx.setLineDash([4 * UIK, 4 * UIK]);
+  ctx.stroke();
+  ctx.restore();
+  hits.push({ poly: [o.TF, o.TR, o.TN, o.TG], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'haut' });
+  hits.push({ poly: [o.TR, o.TN, o.BN, o.BR], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'droite' });
+  hits.push({ poly: [o.TG, o.TF, o.BF, o.BG], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'gauche' });
+}
+
+function dessinerPlateau(t) {
+  var cam = CAMERAS[cameraActive()];
+  hits.length = 0;
+  var x, y, uv, i;
+
+  /* ombre portée douce sous le socle */
+  var cg = cam.uv(1.5, 1.5);
+  var centreG = P(cg[0], cg[1], 0);
+  var omb = ctx.createRadialGradient(centreG.x, centreG.y + L.ch * 0.9, L.tw * 0.5,
+                                     centreG.x, centreG.y + L.ch * 0.9, L.tw * 5.6);
+  omb.addColorStop(0, 'rgba(0,0,0,.32)'); omb.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = omb;
+  ctx.beginPath();
+  ctx.ellipse(centreG.x, centreG.y + L.ch * 0.9, L.tw * 5.4, L.tw * 2.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  /* socle (pedestal) — coins transformés, ordre plateau conservé */
+  var sc = [], bas = L.ch * 0.55;
+  for (i = 0; i < 4; i++) {
+    var cuv = cam.uv(COINS_SOCLE[i][0], COINS_SOCLE[i][1]);
+    sc.push(P(cuv[0], cuv[1], 0));
+  }
+  remplir(ctx, [sc[0], sc[1], sc[2], sc[3]], '#c2926a');
+  /* joues avant du socle : les deux arêtes adjacentes au coin le plus proche */
+  var iFront = 0;
+  for (i = 1; i < 4; i++) if (sc[i].y > sc[iFront].y) iFront = i;
+  var voisins = [(iFront + 1) % 4, (iFront + 3) % 4], teintesJoue = ['#8a5f42', '#7d563b'];
+  for (i = 0; i < 2; i++) {
+    var p1 = sc[iFront], p2 = sc[voisins[i]];
+    var jouePts = [p1, p2, { x: p2.x, y: p2.y + bas }, { x: p1.x, y: p1.y + bas }];
+    remplir(ctx, jouePts, teintesJoue[i]);
+    tracer(ctx, jouePts, 'rgba(92,58,46,.6)', ep(1));            // arêtes discrètes du grès
+  }
+  var texSol = Assets.asset('strates/texture/neutre');
+  if (texSol) {
+    textureFace(ctx, texSol, [sc[0], sc[1], sc[2], sc[3]]);
+    ctx.fillStyle = 'rgba(150,103,71,.5)'; poly(ctx, [sc[0], sc[1], sc[2], sc[3]]); ctx.fill();
+  }
+  tracer(ctx, [sc[0], sc[1], sc[2], sc[3]], '#5c3a2e', ep(1));
+
+  /* cellules du sol (faces cliquables) */
+  for (x = 0; x < N; x++) for (y = 0; y < N; y++) {
+    uv = cam.uv(x, y);
+    var u = uv[0], v = uv[1];
+    var d = [P(u - 0.5, v - 0.5, 0), P(u + 0.5, v - 0.5, 0), P(u + 0.5, v + 0.5, 0), P(u - 0.5, v + 0.5, 0)];
+    var hov = survol && survol.kind === 'sol' && survol.x === x && survol.y === y;
+    remplir(ctx, d, hov && !S.selection && S.reserve[S.joueur] > 0 && S.phase === 'jeu'
+      ? 'rgba(224,152,94,.92)' : 'rgba(164,117,82,.95)');
+    if (texSol && !(hov && !S.selection && S.reserve[S.joueur] > 0 && S.phase === 'jeu')) {
+      textureFace(ctx, texSol, d);
+      ctx.fillStyle = 'rgba(120,80,55,.42)'; poly(ctx, d); ctx.fill();
+    }
+    tracer(ctx, d, hov && S.phase === 'jeu' ? 'rgba(243,229,208,.85)' : 'rgba(107,68,51,.8)', hov ? ep(1.8) : ep(1));
+    hits.push({ poly: d, kind: 'sol', x: x, y: y, z: 0, face: 'sol' });
+  }
+
+  /* boussole au sol (côtés en coordonnées plateau, transformés) */
+  ctx.font = '600 ' + Math.round(Math.max(11, Math.min(30, L.tw * 0.17))) + 'px Georgia, serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  var ctrUV = cam.uv(1.5, 1.5);
+  var ctr = P(ctrUV[0], ctrUV[1], 0);
+  for (var cs = 0; cs < 4; cs++) {
+    var ua = cam.uv(COTES[cs].a[0], COTES[cs].a[1]), ub = cam.uv(COTES[cs].b[0], COTES[cs].b[1]);
+    var a2 = P(ua[0], ua[1], 0), b2 = P(ub[0], ub[1], 0);
+    var mx = (a2.x + b2.x) / 2, my = (a2.y + b2.y) / 2;
+    var dx = mx - ctr.x, dy = my - ctr.y, nrm = Math.hypot(dx, dy) || 1;
+    ctx.fillStyle = 'rgba(243,229,208,.55)';
+    ctx.fillText(COTES[cs].lab, mx + dx / nrm * L.tw * 1.05, my + dy / nrm * L.tw * 1.05);
+  }
+
+  /* repère de la tranche tomographiée */
+  if (S.scan) {
+    var zs = S.scan.z;
+    var eq = [];
+    for (i = 0; i < 4; i++) {
+      var euv = cam.uv(COINS_SOCLE[i][0], COINS_SOCLE[i][1]);
+      eq.push(P(euv[0], euv[1], zs));
+    }
+    ctx.save();
+    ctx.setLineDash([4 * UIK, 7 * UIK]);
+    ctx.strokeStyle = 'rgba(217,142,74,' + (0.35 + 0.2 * Math.sin(t / 300)).toFixed(2) + ')';
+    ctx.lineWidth = ep(1.4);
+    ctx.beginPath();
+    ctx.moveTo(eq[0].x, eq[0].y);
+    for (i = 1; i < 4; i++) ctx.lineTo(eq[i].x, eq[i].y);
+    ctx.closePath(); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(243,229,208,.8)';
+    ctx.font = 'italic ' + Math.round(Math.max(10, Math.min(22, L.tw * 0.14))) + 'px Georgia, serif';
+    ctx.fillText('coupe z=' + zs, eq[0].x, eq[0].y - Math.max(10, L.tw * 0.16));
+    ctx.restore();
+  }
+
+  /* passe principale : algorithme du peintre (u+v+z croissant) */
+  var items = construireItems(cam);
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    if (it.type === 'cube') dessinerCube(it, cam, t);
+    else dessinerFantome(it, cam, t);
+  }
+
+  /* surbrillance de la face survolée (au-dessus, finement) */
+  if (survol && survol.kind === 'cube' && S.phase === 'jeu') {
+    var sv = cam.uv(survol.x, survol.y);
+    var oc = coinsCube(sv[0], sv[1], survol.z);
+    var pts = survol.face === 'haut' ? [oc.TF, oc.TR, oc.TN, oc.TG]
+            : survol.face === 'droite' ? [oc.TR, oc.TN, oc.BN, oc.BR]
+            : [oc.TG, oc.TF, oc.BF, oc.BG];
+    tracer(ctx, pts, 'rgba(243,229,208,.9)', ep(1.8));
+  }
+
+  /* tomographie : radiographie traversante, par-dessus tout */
+  if (S.scan) {
+    var xitems = items.filter(function (it) { return it.type === 'cube' && it.z === S.scan.z; });
+    for (var k = 0; k < xitems.length; k++) {
+      var xr = xitems[k];
+      var ox = coinsCube(xr.u, xr.v, xr.z);
+      var hex = [ox.TF, ox.TR, ox.BR, ox.BN, ox.BG, ox.TG];
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(hex[0].x, hex[0].y);
+      for (var m = 1; m < 6; m++) ctx.lineTo(hex[m].x, hex[m].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(' + (xr.couleur === 'A' ? '110,200,255' : '255,145,102') + ',.12)';
+      ctx.fill();
+      ctx.setLineDash([6 * UIK, 4 * UIK]);
+      ctx.strokeStyle = 'rgba(46,26,20,.55)';   // liseré sombre sous le contour crème (lisibilité)
+      ctx.lineWidth = ep(2.6);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(243,229,208,.9)'; // radiographie : contour pointillé crème
+      ctx.lineWidth = ep(1.7);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = TEINTES[xr.couleur].rayon;
+      ctx.beginPath(); ctx.arc(P(xr.u, xr.v, xr.z).x, P(xr.u, xr.v, xr.z).y, ep(2.1), 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+/* ===================== MINIMAP ===================== */
+function rendreMinimap() {
+  var cam = CAMERAS[cameraActive()];
+  var w = 196, h = 128, m = 18;
+  mctx.clearRect(0, 0, w, h);
+  var ox = w / 2 + 2, oy = h / 2 - 12;
+  function pm(u, v) { return { x: ox + (u - v) * m, y: oy + (u + v) * m / 2 }; }
+
+  /* côtés : buts du joueur dont c'est le point de vue, en couleurs */
+  var pj = cameraActive();
+  for (var i = 0; i < 4; i++) {
+    var ta = cam.uv(COTES[i].a[0], COTES[i].a[1]), tb = cam.uv(COTES[i].b[0], COTES[i].b[1]);
+    var p1 = pm(ta[0], ta[1]), p2 = pm(tb[0], tb[1]);
+    mctx.beginPath(); mctx.moveTo(p1.x, p1.y); mctx.lineTo(p2.x, p2.y);
+    mctx.strokeStyle = COTES[i].joueur === pj ? JOUEURS[pj].couleur : 'rgba(243,229,208,.22)';
+    mctx.lineWidth = COTES[i].joueur === pj ? 2.2 : 1;
+    mctx.stroke();
+  }
+
+  for (var x = 0; x < N; x++) for (var y = 0; y < N; y++) {
+    var uv = cam.uv(x, y);
+    var c = pm(uv[0], uv[1]);
+    var hcol = hauteur(S.grille, x, y);
+    mctx.beginPath();
+    mctx.moveTo(c.x, c.y - m / 2); mctx.lineTo(c.x + m, c.y); mctx.lineTo(c.x, c.y + m / 2); mctx.lineTo(c.x - m, c.y);
+    mctx.closePath();
+    mctx.fillStyle = 'rgba(45,26,24,.9)';
+    mctx.fill();
+    mctx.strokeStyle = 'rgba(243,229,208,.3)'; mctx.lineWidth = 1; mctx.stroke();
+    if (hcol > 0) {
+      mctx.fillStyle = 'rgba(243,229,208,.9)';
+      mctx.font = '600 11px Georgia, serif';
+      mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+      mctx.fillText(String(hcol), c.x, c.y + 0.5);
+    } else {
+      mctx.fillStyle = 'rgba(243,229,208,.25)';
+      mctx.beginPath(); mctx.arc(c.x, c.y, 1.2, 0, Math.PI * 2); mctx.fill();
+    }
+  }
+
+  /* points cardinaux (orientés comme la vue courante) */
+  var ctrc = cam.uv(1.5, 1.5);
+  var ctr = pm(ctrc[0], ctrc[1]);
+  var milieux = [[-0.5, 1.5], [3.5, 1.5], [1.5, -0.5], [1.5, 3.5]];
+  mctx.font = '10px Georgia, serif';
+  for (var j2 = 0; j2 < 4; j2++) {
+    var mc = cam.uv(milieux[j2][0], milieux[j2][1]);
+    var pp = pm(mc[0], mc[1]);
+    var dx = pp.x - ctr.x, dy = pp.y - ctr.y, n2 = Math.hypot(dx, dy) || 1;
+    mctx.fillStyle = 'rgba(243,229,208,.6)';
+    mctx.fillText(COTES[j2].lab, pp.x + dx / n2 * 13, pp.y + dy / n2 * 13);
+  }
+}
+
+/* ===================== ENTRÉES ===================== */
+function pointDansPoly(px, py, p) {
+  var dedans = false;
+  for (var i = 0, j = p.length - 1; i < p.length; j = i++) {
+    if (((p[i].y > py) !== (p[j].y > py)) &&
+        (px < (p[j].x - p[i].x) * (py - p[i].y) / (p[j].y - p[i].y) + p[i].x)) dedans = !dedans;
+  }
+  return dedans;
+}
+function hitTest(px, py) {
+  for (var i = hits.length - 1; i >= 0; i--) {         // du plus proche au plus lointain
+    if (pointDansPoly(px, py, hits[i].poly)) return hits[i];
+  }
+  return null;
+}
+function actionnable(h) {
+  if (!h || S.phase !== 'jeu') return false;
+  if (h.kind === 'fantome') return true;
+  if (h.kind === 'sol') return !S.selection && S.reserve[S.joueur] > 0;
+  var propre = S.grille[h.x][h.y][h.z] === S.joueur;
+  var hcol = hauteur(S.grille, h.x, h.y);
+  if (propre) return true;
+  return h.face === 'haut' && h.z === hcol - 1 && hcol < HMAX && S.reserve[S.joueur] > 0 && !S.selection;
+}
+
+function gererClic(h) {
+  if (S.phase !== 'jeu') return;
+  if (!h) { deselectionner(); return; }
+
+  if (h.kind === 'fantome') { actionDeplacer(h); return; }
+
+  if (h.kind === 'sol') {
+    if (S.selection) { deselectionner(); return; }
+    actionPoser(h.x, h.y);
+    return;
+  }
+
+  if (h.kind === 'cube') {
+    var propre = S.grille[h.x][h.y][h.z] === S.joueur;
+    var hcol = hauteur(S.grille, h.x, h.y);
+    var posable = h.face === 'haut' && h.z === hcol - 1 && hcol < HMAX && !S.selection;
+    if (propre && (!posable || hcol >= HMAX)) { selectionner(h.x, h.y, h.z); return; }
+    if (propre && posable && h.face !== 'haut') { selectionner(h.x, h.y, h.z); return; }
+    if (posable) { actionPoser(h.x, h.y); return; }
+    if (propre) { selectionner(h.x, h.y, h.z); return; }
+    if (h.face === 'haut' && hcol >= HMAX) { toast('Colonne pleine (hauteur ' + HMAX + ').'); return; }
+    deselectionner();
+    toast('Ce cube appartient à l’adversaire.');
+  }
+}
+
+function brancherEntrees() {
+  cv.addEventListener('click', function (ev) {
+    var r = cv.getBoundingClientRect();
+    gererClic(hitTest(ev.clientX - r.left, ev.clientY - r.top));
+  });
+  cv.addEventListener('dblclick', function (ev) {
+    if (S.phase !== 'jeu' || !S.selection) return;
+    var r = cv.getBoundingClientRect();
+    var h = hitTest(ev.clientX - r.left, ev.clientY - r.top);
+    if (h && h.kind === 'cube' && h.x === S.selection.x && h.y === S.selection.y && h.z === S.selection.z) {
+      actionMiner();
+    }
+  });
+  cv.addEventListener('mousemove', function (ev) {
+    var r = cv.getBoundingClientRect();
+    souris.x = ev.clientX - r.left; souris.y = ev.clientY - r.top;
+  });
+  cv.addEventListener('mouseleave', function () { souris.x = -1; souris.y = -1; });
+  cv.addEventListener('contextmenu', function (ev) { ev.preventDefault(); deselectionner(); });
+  window.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') {
+      if (!$('regles').classList.contains('cache')) $('regles').classList.add('cache');
+      else deselectionner();
+    }
+    if ((ev.key === 'm' || ev.key === 'M') && S.phase === 'jeu' && S.selection) actionMiner();
+  });
+  window.addEventListener('resize', ajusterCanvas);
+
+  $('btnNouvelle').addEventListener('click', function () { nouvellePartie(); });
+  $('btnRegles').addEventListener('click', function () { $('regles').classList.remove('cache'); });
+  $('btnFermerRegles').addEventListener('click', function () { $('regles').classList.add('cache'); });
+  $('regles').addEventListener('click', function (ev) {
+    if (ev.target === $('regles')) $('regles').classList.add('cache');
+  });
+  $('btnTextures').addEventListener('click', function () {
+    if (Assets.manifestAbsent && !Object.keys(Assets.entrees).length) {
+      toast('Aucun asset détecté (assets/manifest.js) — rendu vectoriel.');
+      return;
+    }
+    Assets.actif = !Assets.actif;
+    $('btnTextures').textContent = 'Textures : ' + (Assets.actif ? 'auto' : 'off');
+    toast(Assets.actif ? 'Textures plaquées (si présentes).' : 'Textures débrayées — vectoriel pur.');
+    majHUD();
+  });
+  $('btnVoir').addEventListener('click', commencerTour);
+  $('btnMiner').addEventListener('click', actionMiner);
+  $('btnAnnuler').addEventListener('click', deselectionner);
+  $('btnRejouer').addEventListener('click', nouvellePartie);
+  $('btnRejouerFin').addEventListener('click', nouvellePartie);
+  $('btnExaminer').addEventListener('click', function () {
+    $('victoire').classList.add('cache');
+    S.camFin = S.gagnant;
+    majHUD();
+  });
+  $('btnVue').addEventListener('click', function () {
+    S.camFin = S.camFin === 'A' ? 'C' : 'A';
+    majHUD();
+  });
+}
+
+/* ===================== BOUCLE ===================== */
+var rafId = 0;
+function boucle(t) {
+  ajusterCanvas();
+  calculerLayout();
+  survol = (souris.x >= 0) ? hitTest(souris.x, souris.y) : null;
+  cv.style.cursor = actionnable(survol) ? 'pointer' : 'default';
+  dessinerFond();
+  dessinerPlateau(t);
+  rendreMinimap();
+  rafId = requestAnimationFrame(boucle);
+}
+/* redessin immédiat (tests automatisés / onglet throttlé en arrière-plan) */
+function redessiner() {
+  cancelAnimationFrame(rafId);
+  boucle(performance.now());
+}
+
+/* poignée de débogage / tests (console) */
+window.JEU = {
+  get S() { return S; },
+  nouvellePartie: nouvellePartie,
+  terminerTour: terminerTour,
+  commencerTour: commencerTour,
+  poser: function (x, y) { poser(S, x, y); },
+  deplacer: deplacer, miner: miner, dests: dests,
+  forcerScan: function (z) { S.scan = { z: z, dt: S.demiTour }; },
+  verifConnexions: function () { return verifConnexions(S); },
+  cubesVisibles: cubesVisibles,
+  distanceHex: distanceHex,
+  grilleConnaissanceIA: grilleConnaissanceIA,
+  choisirActionIA: choisirActionIA,
+  mode: function () { return MODE; },
+  majHUD: majHUD,
+  redessiner: redessiner,
+  debug: function () { return { L: L, P: P, cam: cameraActive(), hits: hits }; }
+};
+
+/* =====================================================================
+   ======  MODES — accueil, IA (voir plus haut) et EN LIGNE LOB7 ======
+   =====================================================================
+   En ligne (salon LOB7) : élection par hello — le plus petit clientId
+   devient Azur, hôte-arbitre. Azur détient seul le volume complet ;
+   Corail envoie {type:"action", action, cle} et ne reçoit que SA vue
+   (tous ses cubes + cubes adverses visibles depuis la caméra SUD +
+   hauteurs publiques + tomographie active). Jamais d'état complet nu
+   avant la fin. Payloads ≤ 8192 octets (garanti par le SDK), clés
+   d'idempotence pour les envois ET côté arbitre, battements de cœur
+   pour détecter les départs. */
+var NET = {
+  actif: false, conn: null, monId: null, pairId: null, moi: null,
+  stopSub: null, hbT: 0, watchT: 0, dernierVu: 0, maSeq: 0, vues: 0,
+  cles: null, derniereVue: 0
+};
+var ERREURS_FATALES = ['ROOM_EXPIRED', 'ROOM_NOT_FOUND', 'RELEASE_NOT_FOUND', 'ACCOUNT_SUSPENDED',
+  'GAME_NOT_ALLOWED', 'SCOPE_REQUIRED', 'AUTH_INVALID', 'AUTH_REQUIRED',
+  'ROOM_CONNECTION_CLOSED', 'ROOM_CHANGED', 'ROOM_BRIDGE_UNAVAILABLE',
+  'ROOM_PREVIEW_REQUIRED', 'ROOM_PROTOCOL_INVALID'];
+
+function idSalon() {
+  var b = new Uint8Array(16), s = '', i;
+  (window.crypto || window.msCrypto).getRandomValues(b);
+  for (i = 0; i < b.length; i++) s += (b[i] < 16 ? '0' : '') + b[i].toString(16);
+  return s;
+}
+
+/* ---------- accueil ---------- */
+function afficherAccueil() {
+  MODE = null;
+  S = etatInitial();
+  S.phase = 'accueil'; S.selection = null; S.dests = []; S.camFin = 'A';
+  souris.x = -1; souris.y = -1; survol = null;
+  $('victoire').classList.add('cache');
+  $('passage').classList.add('cache');
+  $('deco').classList.add('cache');
+  $('salonAttente').classList.add('cache');
+  $('etapeIA').classList.add('cache');
+  $('menuPrincipal').classList.remove('cache');
+  $('accueilNote').textContent = '';
+  $('accueil').classList.remove('cache');
+  majHUD();
+}
+function partirJouer() {
+  $('accueil').classList.add('cache');
+  nouvellePartie();
+}
+
+/* ---------- salon LOB7 ---------- */
+function noteAccueil(txt) {
+  $('accueilNote').textContent = txt;
+  toast(txt, 3600);
+}
+
+function tenterEnLigne() {
+  if (!window.LOB7Rooms || typeof window.LOB7Rooms.connect !== 'function') {
+    retourSalonImpossible('SDK LOB7 absent de la page');
+    return;
+  }
+  $('salonEtat').textContent = 'Connexion au salon…';
+  $('salonId').textContent = '';
+  $('salonAttente').classList.remove('cache');
+  window.LOB7Rooms.connect().then(demarrerSalon).catch(function (e) {
+    var motif = (e && e.code === 'ROOM_PREVIEW_REQUIRED')
+      ? 'hors LOB7 — ouvre ce fichier dans un salon LOB7 (lob7.com), pas en direct'
+      : 'salon injoignable (' + ((e && e.code) || 'erreur') + ')';
+    retourSalonImpossible(motif);
+  });
+}
+function retourSalonImpossible(motif) {
+  $('salonAttente').classList.add('cache');
+  $('accueil').classList.remove('cache');
+  noteAccueil('En ligne impossible : ' + motif + '.');
+}
+
+function demarrerSalon(conn) {
+  NET.actif = true; NET.conn = conn; NET.monId = idSalon();
+  NET.cles = {}; NET.maSeq = 0; NET.vues = 0; NET.derniereVue = 0;
+  NET.pairId = null; NET.moi = null; NET.dernierVu = Date.now();
+  $('salonEtat').textContent = 'Salon LOB7 relié — en attente d’un adversaire…';
+  $('salonId').textContent = 'Ton identifiant de duel : ' + NET.monId.slice(0, 10) + '… (le plus petit devient Azur)';
+  conn.send({ type: 'hello', jeu: 'strates', clientId: NET.monId }, { idempotencyKey: 'hello-' + NET.monId })
+    .then(annoncerSalon)
+    .catch(function () {           // retry avec la même clé d'idempotence
+      setTimeout(function () {
+        conn.send({ type: 'hello', jeu: 'strates', clientId: NET.monId }, { idempotencyKey: 'hello-' + NET.monId })
+          .then(annoncerSalon)
+          .catch(function () { salonPerdu('impossible d’annoncer sa présence dans le salon'); });
+      }, 1500);
+    });
+  NET.hbT = setInterval(function () {
+    netEnvoyer({ type: 'hb', clientId: NET.monId });
+  }, 5000);
+  NET.watchT = setInterval(function () {
+    if (NET.actif && NET.pairId && Date.now() - NET.dernierVu > 16000)
+      salonPerdu('l’adversaire ne répond plus');
+  }, 4000);
+}
+/* on ne s'abonne qu'après notre propre hello : l'historique périmé du
+   salon (session précédente) est filtré par numéro de séquence */
+function annoncerSalon(m) {
+  if (m && Number.isSafeInteger(m.sequence)) NET.maSeq = m.sequence;
+  if (!NET.stopSub && NET.actif && NET.conn)
+    NET.stopSub = NET.conn.subscribe(traiterMessageSalon, { after: 0, onError: erreurSalon });
+}
+
+function erreurSalon(err) {
+  if (NET.actif && err && ERREURS_FATALES.indexOf(err.code) >= 0)
+    salonPerdu('connexion au salon perdue (' + err.code + ')');
+}
+
+function netEnvoyer(donnees, cle) {
+  if (!NET.conn) return;
+  var opts = cle ? { idempotencyKey: cle } : undefined;
+  NET.conn.send(donnees, opts).catch(function () {   // retry, même clé d'idempotence
+    setTimeout(function () {
+      if (NET.conn) NET.conn.send(donnees, opts).catch(function () {});
+    }, 1500);
+  });
+}
+
+function traiterMessageSalon(msg) {
+  var d = msg && msg.data;
+  if (!d || typeof d !== 'object' || !d.clientId) return;
+  if (d.clientId === NET.monId) return;                        // mes propres échos
+  if (d.type !== 'hello' && NET.maSeq && Number.isSafeInteger(msg.sequence)
+      && msg.sequence <= NET.maSeq) return;                    // historique périmé
+  if (NET.pairId && d.clientId !== NET.pairId) return;         // tiers écarté (duel)
+  NET.dernierVu = Date.now();
+  if (d.type === 'hello') {
+    if (!NET.pairId) { NET.pairId = d.clientId; elire(); }
+  } else if (d.type === 'quit') {
+    salonPerdu('l’adversaire a quitté le salon');
+  } else if (d.type === 'action' && NET.moi === 'A') {
+    recevoirActionCorail(d);
+  } else if (d.type === 'vue' && NET.moi === 'C') {
+    appliquerVue(d);
+  } else if (d.type === 'refus' && NET.moi === 'C') {
+    toast('Coup refusé par l’arbitre : ' + (d.motif || 'illégal') + '. Résynchronisation…');
+  } else if (d.type === 'fin' && NET.moi === 'C') {
+    appliquerFin(d);
+  } else if (d.type === 'rejouer' && NET.moi === 'A') {
+    toast('L’adversaire propose une revanche — nouvelle partie.');
+    relancerPartieEnLigne();
+  }
+}
+
+/* Élection déterministe : le plus petit clientId = Azur (hôte-arbitre). */
+function elire() {
+  NET.moi = NET.monId < NET.pairId ? 'A' : 'C';
+  MODE = 'enligne';
+  $('salonAttente').classList.add('cache');
+  $('accueil').classList.add('cache');
+  $('victoire').classList.add('cache');
+  S = etatInitial();
+  S.phase = (NET.moi === 'A') ? 'jeu' : 'attente';
+  S.selection = null; S.dests = []; S.camFin = 'A';
+  souris.x = -1; souris.y = -1; survol = null;
+  if (NET.moi === 'A') {
+    toast('Tu es Azur — hôte et arbitre du volume. Tu commences.', 3600);
+    diffuserVue();
+  } else {
+    toast('Tu es Corail — l’Azur (hôte-arbitre) commence.', 3600);
+  }
+  majHUD();
+}
+
+/* La vue de Corail : ses cubes + cubes adverses visibles depuis la
+   caméra SUD (ou couche tomographiée) + hauteurs publiques. C'est tout. */
+function construireVue() {
+  var vis = cubesVisibles(CAMERAS.C, S.grille);
+  var h = [], Cs = [], Av = [], x, y, z;
+  for (x = 0; x < N; x++) {
+    h.push([]);
+    for (y = 0; y < N; y++) {
+      h[x].push(S.grille[x][y].length);
+      var col = S.grille[x][y];
+      for (z = 0; z < col.length; z++) {
+        if (col[z] === 'C') Cs.push([x, y, z]);
+        else if (vis[x + ',' + y + ',' + z] || (S.scan && z === S.scan.z)) Av.push([x, y, z]);
+      }
+    }
+  }
+  return { j: S.joueur, dt: S.demiTour, ra: S.reserve.A, rc: S.reserve.C,
+           sc: S.scan ? S.scan.z : -1, h: h, C: Cs, V: Av };
+}
+
+function diffuserVue() {
+  if (!NET.conn || NET.moi !== 'A') return;
+  NET.vues++;
+  netEnvoyer({ type: 'vue', pour: 'corail', clientId: NET.monId, num: NET.vues,
+               s: construireVue() }, 'vue-' + NET.monId + '-' + NET.vues);
+}
+
+function appliquerVue(d) {
+  if (!d || !d.s || typeof d.num !== 'number' || d.num <= NET.derniereVue) return;
+  NET.derniereVue = d.num;
+  var p = d.s, g = [], x, y, z, i;
+  for (x = 0; x < N; x++) { g.push([]); for (y = 0; y < N; y++) {
+    var col = [];
+    for (z = 0; z < p.h[x][y]; z++) col.push('X');   // présence publique, couleur inconnue
+    g[x].push(col);
+  } }
+  for (i = 0; i < p.C.length; i++) { var c = p.C[i]; g[c[0]][c[1]][c[2]] = 'C'; }
+  for (i = 0; i < p.V.length; i++) { var v = p.V[i]; g[v[0]][v[1]][v[2]] = 'A'; }
+  S.grille = g;
+  S.joueur = p.j; S.demiTour = p.dt;
+  S.reserve = { A: p.ra, C: p.rc };
+  S.scan = (typeof p.sc === 'number' && p.sc >= 0) ? { z: p.sc, dt: p.dt } : null;
+  S.gagnant = null; S.simultane = false;
+  S.selection = null; S.dests = [];
+  $('victoire').classList.add('cache');
+  S.phase = (p.j === NET.moi) ? 'jeu' : 'attente';
+  if (S.phase === 'jeu')
+    toast(S.scan ? 'À toi de jouer — tomographie z=' + S.scan.z + ' ce tour.' : 'À toi de jouer.', 2600);
+  majHUD();
+}
+
+/* Victoire proclamée par Azur seul ; le plateau complet n'est révélé
+   qu'à la fin de partie (écran « Examiner le plateau » des deux côtés). */
+function envoyerFin() {
+  var cols = [], x, y;
+  for (x = 0; x < N; x++) {
+    var cx = [];
+    for (y = 0; y < N; y++) cx.push(S.grille[x][y].join(''));
+    cols.push(cx);
+  }
+  netEnvoyer({ type: 'fin', clientId: NET.monId, g: S.gagnant, st: S.simultane,
+               dt: S.demiTour, cols: cols },
+             'fin-' + NET.monId + '-' + S.demiTour + '-' + (S.gagnant || ''));
+}
+
+function appliquerFin(d) {
+  if (!d || !d.cols) return;
+  var g = [], x, y, z;
+  for (x = 0; x < N; x++) { g.push([]); for (y = 0; y < N; y++) {
+    var s = (d.cols[x] && d.cols[x][y]) || '';
+    var col = [];
+    for (z = 0; z < s.length; z++) col.push(s.charAt(z));
+    g[x].push(col);
+  } }
+  S.grille = g;
+  S.gagnant = d.g; S.simultane = !!d.st; S.demiTour = d.dt || S.demiTour;
+  S.phase = 'fin'; S.camFin = d.g || 'A';
+  S.selection = null; S.dests = []; S.scan = null;
+  afficherVictoire();
+  majHUD();
+}
+
+/* Côté Azur : validation autoritaire du coup de Corail, puis application
+   et diffusion. Idempotence par clé : un doublon ne rejoue jamais le coup. */
+function recevoirActionCorail(d) {
+  if (MODE !== 'enligne' || NET.moi !== 'A' || !d.action || !d.cle) return;
+  if (S.phase === 'fin' || S.gagnant) { diffuserVue(); return; }
+  if (NET.cles[d.cle]) { diffuserVue(); return; }
+  var a = d.action, ok = false, motif = 'action inconnue';
+  function dans(c) { return Number.isInteger(c) && c >= 0 && c < N; }
+  function zvalide(c) { return Number.isInteger(c) && c >= 0 && c < HMAX; }
+  if (S.joueur !== 'C') motif = 'ce n’est pas ton tour';
+  else if (a.kind === 'pose') {
+    ok = dans(a.x) && dans(a.y) && legalPose(S, a.x, a.y);
+    if (!ok) motif = 'pose illégale';
+  } else if (a.kind === 'deplace') {
+    ok = dans(a.x) && dans(a.y) && zvalide(a.z) && dans(a.nx) && dans(a.ny) &&
+         S.grille[a.x][a.y][a.z] === 'C';
+    if (ok) {
+      var ds = dests(S, a.x, a.y, a.z), trouve = false, i;
+      for (i = 0; i < ds.length; i++) if (ds[i].x === a.nx && ds[i].y === a.ny) { trouve = true; break; }
+      ok = trouve;
+    }
+    if (!ok) motif = 'déplacement illégal';
+  } else if (a.kind === 'mine') {
+    ok = dans(a.x) && dans(a.y) && zvalide(a.z) && S.grille[a.x][a.y][a.z] === 'C';
+    if (!ok) motif = 'minage illégal';
+  }
+  if (!ok) {
+    netEnvoyer({ type: 'refus', clientId: NET.monId, cle: d.cle, motif: motif });
+    diffuserVue();
+    return;
+  }
+  NET.cles[d.cle] = 1;
+  if (a.kind === 'pose') poser(S, a.x, a.y);
+  else if (a.kind === 'deplace') deplacer(S, a.x, a.y, a.z, a.nx, a.ny);
+  else miner(S, a.x, a.y, a.z);
+  terminerTour();       // fin → {type:"fin"}, sinon avance + diffusion de la vue
+}
+
+/* Côté Corail : application optimiste locale, puis la vue de l'arbitre
+   fait foi (resynchronisation systématique). */
+function corailJoue(a, appliquer) {
+  var cle = idSalon();
+  appliquer();
+  S.joueur = 'A';
+  S.demiTour++;
+  S.scan = null;
+  S.selection = null; S.dests = [];
+  S.phase = 'attente';
+  netEnvoyer({ type: 'action', clientId: NET.monId,
+               action: { kind: a.kind, x: a.x, y: a.y, z: a.z, nx: a.nx, ny: a.ny },
+               cle: cle }, cle);
+  toast('Coup envoyé à l’arbitre…');
+  majHUD();
+}
+
+function relancerPartieEnLigne() {
+  if (NET.moi !== 'A') return;
+  S = etatInitial();
+  S.phase = 'jeu'; S.selection = null; S.dests = []; S.camFin = 'A';
+  souris.x = -1; souris.y = -1; survol = null;
+  $('victoire').classList.add('cache');
+  diffuserVue();
+  toast('Nouvelle partie — Azur commence.');
+  majHUD();
+}
+
+function salonPerdu(raison) {
+  if (!NET.actif) return;
+  nettoyerSalon();
+  $('passage').classList.add('cache');
+  $('victoire').classList.add('cache');
+  $('salonAttente').classList.add('cache');
+  $('accueil').classList.add('cache');
+  $('decoRaison').textContent = raison + '.';
+  $('deco').classList.remove('cache');
+  S.phase = 'deconnexion';
+  S.selection = null; S.dests = [];
+  majHUD();
+}
+
+function nettoyerSalon() {
+  NET.actif = false; NET.conn = null; NET.pairId = null; NET.moi = null;
+  NET.cles = {}; NET.derniereVue = 0; NET.vues = 0; NET.maSeq = 0;
+  if (NET.hbT) { clearInterval(NET.hbT); NET.hbT = 0; }
+  if (NET.watchT) { clearInterval(NET.watchT); NET.watchT = 0; }
+  if (NET.stopSub) { try { NET.stopSub(); } catch (e) { /* déjà coupé */ } NET.stopSub = null; }
+  MODE = null;
+}
+
+function quitterSalon() {
+  if (NET.conn && NET.pairId) netEnvoyer({ type: 'quit', clientId: NET.monId });
+  setTimeout(function () {
+    nettoyerSalon();
+    afficherAccueil();
+  }, 350);
+}
+
+/* ---------- branchements des modes (accueil, salon, IA) ---------- */
+function brancherModeles() {
+  $('choixLocal').addEventListener('click', function () { MODE = 'local'; partirJouer(); });
+  $('choixIA').addEventListener('click', function () {
+    $('menuPrincipal').classList.add('cache');
+    $('etapeIA').classList.remove('cache');
+  });
+  $('choixRetour').addEventListener('click', function () {
+    $('etapeIA').classList.add('cache');
+    $('menuPrincipal').classList.remove('cache');
+  });
+  $('choixIAFacile').addEventListener('click', function () { MODE = 'ia'; IA_NIVEAU = 'facile'; partirJouer(); });
+  $('choixIANormal').addEventListener('click', function () { MODE = 'ia'; IA_NIVEAU = 'normal'; partirJouer(); });
+  $('choixLigne').addEventListener('click', tenterEnLigne);
+  $('btnReglesAccueil').addEventListener('click', function () { $('regles').classList.remove('cache'); });
+  $('btnQuitterSalon').addEventListener('click', quitterSalon);
+  $('btnQuitterSalon2').addEventListener('click', quitterSalon);
+  $('btnRetourAccueil').addEventListener('click', function () {
+    $('deco').classList.add('cache');
+    afficherAccueil();
+  });
+}
+
+/* ===================== DÉMARRAGE ===================== */
+Assets.init();
+brancherEntrees();
+brancherModeles();
+ajusterCanvas();
+afficherAccueil();
+requestAnimationFrame(boucle);
+</script>
+</body>
+</html>

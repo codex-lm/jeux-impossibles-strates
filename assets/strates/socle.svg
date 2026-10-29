@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <title>Socle quatre par quatre vu de dessus</title>
+  <g fill="none" stroke="#e8d5a3" stroke-linejoin="round">
+    <path d="M30 16h196l14 14v196l-14 14H30l-14-14V30Z" stroke-width="2.4"/>
+    <rect x="24" y="24" width="208" height="208" rx="3" stroke-width="1" opacity="0.5"/>
+    <path d="M76 24v208M128 24v208M180 24v208M24 76h208M24 128h208M24 180h208" stroke-width="1.5" opacity="0.82"/>
+    <path d="M8 44V8h36M212 8h36v36M248 212v36h-36M44 248H8v-36" stroke-width="3" stroke-linecap="square"/>
+    <path d="m128 120 8 8-8 8-8-8Z" stroke-width="1.2" opacity="0.55"/>
+  </g>
+</svg>

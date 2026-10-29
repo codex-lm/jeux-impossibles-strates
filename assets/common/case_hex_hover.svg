@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <title>Case hexagonale survolée</title>
+  <polygon points="50,4 89.8,27 89.8,73 50,96 10.2,73 10.2,27" fill="#1b3349" fill-opacity="0.94" stroke="#e8d5a3" stroke-width="2.4" stroke-linejoin="round"/>
+  <polygon points="50,10 84.7,30 84.7,70 50,90 15.3,70 15.3,30" fill="none" stroke="#6ec8ff" stroke-opacity="0.72" stroke-width="1.2"/>
+  <path d="M50 4v8M89.8 27l-6.9 4M89.8 73l-6.9-4M50 96v-8M10.2 73l6.9-4M10.2 27l6.9 4" fill="none" stroke="#e8d5a3" stroke-width="2.8" stroke-linecap="round"/>
+  <circle cx="50" cy="50" r="2.2" fill="#e8d5a3"/>
+</svg>

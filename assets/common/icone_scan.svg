@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Scan</title>
+  <g fill="none" stroke="#e8d5a3" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 21V8h13M43 8h13v13M56 43v13H43M21 56H8V43"/>
+    <path d="M14 32s7-11 18-11 18 11 18 11-7 11-18 11-18-11-18-11Z"/>
+    <circle cx="32" cy="32" r="6"/>
+    <path d="M13 32h38" opacity="0.65"/>
+  </g>
+  <circle cx="32" cy="32" r="2.2" fill="#e8d5a3"/>
+</svg>
