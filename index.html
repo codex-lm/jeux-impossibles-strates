@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>STRATES — Hex en 3D, avec gravité et cavernes cachées</title>
+<title>STRATES — 3D Hex with gravity and hidden caverns</title>
 <style>
   :root{
     --nuit:#241318; --azur:#6ec8ff; --corail:#ff9166;
@@ -93,16 +93,30 @@
   .voile .actions{margin-top:1.9rem; display:flex; gap:.9rem; flex-wrap:wrap; justify-content:center}
   .voile .actions button{font-size:.8rem; padding:.7em 1.8em}
 
-  /* ---------- écran d'accueil ---------- */
-  #accueil .accueilCarte{display:flex; flex-direction:column; align-items:center;
-    max-width:min(34rem,92vw); width:100%}
-  #accueil .menuPrincipal{display:flex; flex-direction:column; gap:.75rem;
-    width:100%; margin-top:.7rem}
+  /* ---------- écran d'accueil ----------
+     Voile semi-transparent : le plateau 3D (socle + canyon) reste bien
+     visible derrière. Grille 1fr/auto/1fr : le bouton « Play against
+     the AI » occupe le CENTRE EXACT de l'écran (capture automatique),
+     zone cliquable garantie ≥ 220×90 px (min-width/min-height). */
+  #accueil{display:grid; grid-template-rows:1fr auto 1fr; grid-template-columns:1fr;
+    justify-items:center; background:rgba(21,11,14,.55); backdrop-filter:blur(1.5px)}
+  #accueil .accueilHaut{grid-row:1; align-self:end; text-align:center;
+    padding-bottom:1rem; max-width:min(34rem,92vw)}
+  #accueil .accueilBas{grid-row:3; align-self:start; padding-top:1rem;
+    display:flex; flex-direction:column; gap:.55rem; align-items:center;
+    width:100%; max-width:min(26rem,92vw)}
   #accueil .choix{font-size:.95rem; letter-spacing:.1em; padding:.8em 1.3em;
     text-transform:none; text-align:center}
   #accueil .choix .sousBtn{display:block; font-size:.62rem; letter-spacing:.05em;
     opacity:.62; margin-top:.3em; font-style:italic}
-  #accueil #accueilNote{margin-top:1rem; font-size:.78rem; color:var(--corail);
+  #accueil .principal{grid-row:2; min-width:230px; min-height:92px;
+    font-size:1.18rem; letter-spacing:.14em; padding:1em 2em;
+    border-width:2px; background:rgba(217,142,74,.14)}
+  #accueil .principal:hover{background:rgba(217,142,74,.26)}
+  #accueil .secondaire{font-size:.85rem; padding:.6em 1.1em; width:100%}
+  #accueil .accueilBasBtns{display:flex; gap:.6rem; margin-top:.35rem;
+    flex-wrap:wrap; justify-content:center}
+  #accueil #accueilNote{margin-top:.6rem; font-size:.78rem; color:var(--corail);
     font-style:italic; min-height:1.3em; text-align:center; max-width:30rem}
   #salonAttente .nom{font-size:clamp(1.3rem,3.4vw,2.1rem)}
   #iaBadge{position:fixed; top:5.7rem; left:50%; transform:translateX(-50%); z-index:7;
@@ -132,13 +146,14 @@
 
 <header>
   <h1>STRATES</h1>
-  <div class="sous">Hex en 3D, avec gravité et cavernes cachées</div>
+  <div class="sous" data-i="tagline">3D Hex, with gravity and hidden caverns</div>
   <div class="filet"></div>
   <div class="boutons">
-    <button id="btnNouvelle">Nouvelle partie</button>
-    <button id="btnRegles">Règles</button>
-    <button id="btnTextures" title="Plaquer les textures du dossier assets/ si le manifeste est présent (mode débrayable)">Textures&nbsp;: auto</button>
-    <button id="btnQuitterSalon" class="danger cache">Quitter le salon</button>
+    <button id="btnLangue">FR</button>
+    <button id="btnNouvelle" data-i="btn.nouvelle">New game</button>
+    <button id="btnRegles" data-i="btn.regles">Rules</button>
+    <button id="btnTextures" data-i-title="tex.titre" title="Apply textures from the assets/ folder when the manifest is present (toggleable)">Textures: auto</button>
+    <button id="btnQuitterSalon" class="danger cache" data-i="btn.quitterSalon">Leave room</button>
   </div>
 </header>
 
@@ -146,8 +161,8 @@
   <div class="joueur" id="tourLigne"></div>
   <div class="dim" id="dtLigne"></div>
   <hr class="sep">
-  <div><span class="pastille azurBg"></span>Azur — réserve&nbsp;: <b id="resA">16</b> cubes</div>
-  <div><span class="pastille corailBg"></span>Corail — réserve&nbsp;: <b id="resC">16</b> cubes</div>
+  <div id="ligneResA"></div>
+  <div id="ligneResC"></div>
   <hr class="sep">
   <div id="scanLigne" class="dim"></div>
   <div class="dim" id="vueLigne"></div>
@@ -155,121 +170,121 @@
 
 <div id="minimapWrap" class="panneau">
   <canvas id="minimap"></canvas>
-  <div class="legende">hauteurs — info publique</div>
+  <div class="legende" data-i="minimap.legende">heights — public info</div>
 </div>
 
 <div id="barre" class="panneau">
   <span class="txt" id="txtAction"></span>
-  <button id="btnMiner" class="danger">Miner ce cube</button>
-  <button id="btnAnnuler">Annuler</button>
-  <button id="btnVue">Changer de vue</button>
-  <button id="btnRejouerFin">Rejouer</button>
+  <button id="btnMiner" class="danger" data-i="btn.miner">Mine this cube</button>
+  <button id="btnAnnuler" data-i="btn.annuler">Cancel</button>
+  <button id="btnVue" data-i="btn.vue">Change view</button>
+  <button id="btnRejouerFin" data-i="btn.rejouer">Play again</button>
 </div>
 
 <div id="toast"></div>
 
 <!-- écran « passe l'appareil » -->
 <div id="passage" class="voile cache">
-  <div class="sur">Passe l’appareil</div>
+  <div class="sur" data-i="pass.sur">Pass the device</div>
   <div class="nom" id="passNom"></div>
   <div class="detail" id="passDetail"></div>
   <div class="note" id="passNote"></div>
-  <div class="actions"><button id="btnVoir">Voir mon plateau</button></div>
+  <div class="actions"><button id="btnVoir" data-i="btn.voir">See my board</button></div>
 </div>
 
 <!-- écran de victoire -->
 <div id="victoire" class="voile cache">
-  <div class="sur">Fin de partie</div>
+  <div class="sur" data-i="vic.sur">Game over</div>
   <div class="nom" id="vicNom"></div>
   <div class="detail" id="vicDetail"></div>
   <div class="note" id="vicNote"></div>
   <div class="actions">
-    <button id="btnRejouer">Rejouer</button>
-    <button id="btnExaminer">Examiner le plateau</button>
+    <button id="btnRejouer" data-i="btn.rejouer">Play again</button>
+    <button id="btnExaminer" data-i="btn.examiner">Inspect the board</button>
   </div>
 </div>
 
 <!-- badge « L'IA réfléchit… » (tour de l'IA) -->
-<div id="iaBadge" class="cache">L’IA réfléchit…</div>
+<div id="iaBadge" class="cache" data-i="ia.badge">The AI is thinking…</div>
 
-<!-- écran d'accueil -->
+<!-- écran d'accueil : voile semi-transparent (plateau visible derrière),
+     bouton principal « Play against the AI » au centre exact de l'écran -->
 <div id="accueil" class="voile">
-  <div class="accueilCarte">
-    <div class="sur">Bienvenue au canyon</div>
+  <div class="accueilHaut">
+    <div class="sur" data-i="accueil.sur">Welcome to the canyon</div>
     <div class="nom">STRATES</div>
-    <div class="detail">Hex en 3D, avec gravité et cavernes cachées.<br>Choisis ton mode de duel.</div>
-    <div id="menuPrincipal" class="menuPrincipal">
-      <button class="choix" id="choixLocal">Deux joueurs — même écran<span class="sousBtn">Le duel original : on se passe l’appareil entre les tours.</span></button>
-      <button class="choix" id="choixIA">Contre l’IA<span class="sousBtn">Tu es Azur, la machine est Corail — honnête, elle ne voit que depuis son côté.</span></button>
-      <button class="choix" id="choixLigne">En ligne — salon LOB7<span class="sousBtn">Deux navigateurs réunis dans un même salon LOB7 (lob7.com).</span></button>
-    </div>
-    <div id="etapeIA" class="menuPrincipal cache">
-      <div class="detail" style="margin-bottom:.2rem">Quel niveau pour Corail&nbsp;?</div>
-      <button class="choix" id="choixIAFacile">Facile<span class="sousBtn">Environ 60&nbsp;% de coups aléatoires légaux.</span></button>
-      <button class="choix" id="choixIANormal">Normal<span class="sousBtn">Glouton : relier, bloquer le chemin visible, préserver ses cubes.</span></button>
-      <button class="choix discret" id="choixRetour">Retour</button>
+    <div class="detail" data-i="accueil.detail">3D Hex, with gravity and hidden caverns.<br>Choose your duel.</div>
+  </div>
+  <button class="choix principal" id="choixIAPrincipal" data-i="accueil.iaBtn">Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — honest: it only sees from its own side.</span></button>
+  <div class="accueilBas">
+    <button class="choix secondaire" id="choixLocal" data-i="accueil.localBtn">Two players — same screen<span class="sousBtn">The original duel: pass the device between turns.</span></button>
+    <button class="choix secondaire" id="choixIAFacile" data-i="accueil.facileBtn">Against the AI — Easy<span class="sousBtn">About 60% random legal moves.</span></button>
+    <button class="choix secondaire" id="choixLigne" data-i="accueil.ligneBtn">Online — LOB7 room<span class="sousBtn">Two browsers joined in a shared LOB7 room (lob7.com).</span></button>
+    <div class="accueilBasBtns">
+      <button id="btnReglesAccueil" data-i="accueil.regle">Read the rules</button>
+      <button id="btnLangueAccueil">FR</button>
     </div>
     <div id="accueilNote"></div>
-    <div class="actions"><button id="btnReglesAccueil">Lire les règles</button></div>
   </div>
 </div>
 
 <!-- écran d'attente du salon LOB7 -->
 <div id="salonAttente" class="voile cache">
-  <div class="sur">Salon LOB7</div>
-  <div class="nom" id="salonEtat">Connexion au salon…</div>
+  <div class="sur" data-i="salon.sur">LOB7 room</div>
+  <div class="nom" id="salonEtat">Connecting to the room…</div>
   <div class="detail" id="salonId"></div>
-  <div class="note">Le plus petit identifiant devient Azur — hôte et arbitre technique du volume.</div>
-  <div class="actions"><button id="btnQuitterSalon2" class="danger">Quitter le salon</button></div>
+  <div class="note" data-i="salon.note">The smallest identifier becomes Azur — host and technical referee of the volume.</div>
+  <div class="actions"><button id="btnQuitterSalon2" class="danger" data-i="btn.quitterSalon">Leave room</button></div>
 </div>
 
 <!-- écran dédié : salon interrompu -->
 <div id="deco" class="voile cache">
-  <div class="sur">Salon interrompu</div>
-  <div class="nom">Partie interrompue</div>
+  <div class="sur" data-i="deco.sur">Room interrupted</div>
+  <div class="nom" data-i="deco.nom">Game interrupted</div>
   <div class="detail" id="decoRaison"></div>
-  <div class="note">Rien n’a été diffusé au-delà des vues légitimes — les cavernes restent caves.</div>
-  <div class="actions"><button id="btnRetourAccueil">Retour à l’accueil</button></div>
+  <div class="note" data-i="deco.note">Nothing was broadcast beyond the legitimate views — the caverns stay hollow.</div>
+  <div class="actions"><button id="btnRetourAccueil" data-i="btn.retourAccueil">Back to home</button></div>
 </div>
 
-<!-- modale règles -->
+<!-- modale règles (corps traduit via data-i, bouton Fermer hors flux traduit) -->
 <div id="regles" class="cache">
   <div class="carte">
+    <div id="reglesCorps" data-i="regles.corps">
     <h2>STRATES</h2>
-    <p style="color:rgba(243,229,208,.6)">Hex en 3D, avec gravité et cavernes cachées — duel au tour par tour&nbsp;: deux joueurs sur le même écran, contre l’IA, ou en ligne dans un salon LOB7.</p>
+    <p style="color:rgba(243,229,208,.6)">3D Hex with gravity and hidden caverns — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>
 
-    <h3>Le plateau</h3>
-    <p>Une base <b>4×4</b> ; chaque colonne accueille jusqu’à <b>4 cubes</b>, toujours remplie depuis le sol, sans trou (gravité stricte). Chaque joueur dispose de <b>16 cubes</b> en réserve ; le plateau est vide au départ. <span class="azurC">Azur</span> commence.</p>
+    <h3>The board</h3>
+    <p>A <b>4×4</b> base; each column holds up to <b>4 cubes</b>, always filled from the ground, with no holes (strict gravity). Each player has <b>16 cubes</b> in reserve; the board starts empty. <span class="azurC">Azur</span> starts.</p>
 
-    <h3>À son tour, une seule action</h3>
-    <p><b>1. POSER</b> — un cube de réserve au sommet d’une colonne (si hauteur &lt; 4). Clique une case du sol, ou le <i>dessus</i> d’une colonne.</p>
-    <p><b>2. DÉPLACER</b> — un de <b>tes</b> cubes vers une colonne adjacente (±x ou ±y) : il atterrit au sommet. Montée d’au plus <b>1 niveau</b> (sommet destination ≤ hauteur du cube) ; descente libre. La colonne d’origine se compresse : ce qui était au-dessus retombe. Clique ton cube (face latérale) puis un fantôme <span style="color:var(--cuivre)">cuivré</span>.</p>
-    <p><b>3. MINER</b> — retire un de <b>tes</b> cubes, même enfoui : il retourne en réserve et la colonne se compresse d’un cran — les cubes adverses tombent. Arme tactique. Double-clic sur ton cube, touche <b>M</b>, ou bouton « Miner ».</p>
+    <h3>One action per turn</h3>
+    <p><b>1. PLACE</b> — a cube from your reserve on top of a column (if height &lt; 4). Click a ground cell, or the <i>top</i> of a column.</p>
+    <p><b>2. MOVE</b> — one of <b>your</b> cubes to an adjacent column (±x or ±y): it lands on top. Climb of at most <b>1 level</b> (destination top ≤ cube height); free descent. The origin column compresses: whatever was above falls back. Click your cube (side face) then a coppery <span style="color:var(--cuivre)">ghost</span>.</p>
+    <p><b>3. MINE</b> — remove one of <b>your</b> cubes, even a buried one: it returns to your reserve and the column compresses one notch — enemy cubes fall. A tactical weapon. Double-click your cube, press <b>M</b>, or use the “Mine” button.</p>
 
-    <h3 class="azurC">Victoire — hex vertical</h3>
-    <p><span class="azurC">Azur</span> relie la face <b>Ouest</b> (x=0) à la face <b>Est</b> (x=3) ; <span class="corailC">Corail</span> relie le <b>Sud</b> (y=0) au <b>Nord</b> (y=3), par une chaîne de cubes tangents face à face — adjacence en <b>6 directions</b> (±x, ±y, ±z). Vérifiée après chaque action, effondrements compris. Connexions simultanées : le joueur actif gagne.</p>
+    <h3 class="azurC">Victory — vertical Hex</h3>
+    <p><span class="azurC">Azur</span> links the <b>West</b> face (x=0) to the <b>East</b> face (x=3); <span class="corailC">Corail</span> links <b>South</b> (y=0) to <b>North</b> (y=3), through a chain of face-touching cubes — adjacency in <b>6 directions</b> (±x, ±y, ±z). Checked after every action, collapses included. Simultaneous connections: the active player wins.</p>
 
-    <h3>Occultation — le cœur du jeu</h3>
-    <p>Chaque joueur voit le plateau depuis <b>son</b> côté, en caméra isométrique <b>fixe</b> : Azur depuis l’Ouest, Corail depuis le Sud. Un cube bas dissimulé derrière une colonne haute est <b>invisible</b> : l’embuscade est légale. Aucune rotation libre. Entre les tours, l’écran « Passe l’appareil » protège les deux vues.</p>
+    <h3>Occlusion — the heart of the game</h3>
+    <p>Each player sees the board from <b>their own</b> side, with a <b>fixed</b> isometric camera: Azur from the West, Corail from the South. A low cube hidden behind a tall column is <b>invisible</b>: ambush is legal. No free rotation. Between turns, the “Pass the device” screen protects both views.</p>
 
-    <h3>Tomographie</h3>
-    <p>Tous les <b>8 demi-tours</b>, une couche horizontale aléatoire (z = 0 à 3) passe en <b>radiographie</b> pendant tout le tour : ses cubes — même occlus — apparaissent en surimpression translucide traversante. Public et momentané.</p>
+    <h3>Tomography</h3>
+    <p>Every <b>8 half-turns</b>, one random horizontal layer (z = 0 to 3) goes into <b>X-ray</b> for the whole turn: its cubes — even occluded — appear as a translucent see-through overlay. Public and momentary.</p>
 
     <h3>Minimap</h3>
-    <p>En haut à droite : la grille vue de dessus avec la <b>hauteur</b> physique de chaque colonne — information publique. Les couleurs, elles, ne se voient que depuis son côté.</p>
+    <p>Top right: the grid seen from above with the physical <b>height</b> of each column — public information. Colors, however, can only be seen from your own side.</p>
 
-    <h3>Modes de jeu</h3>
-    <p><b>Même écran</b> — le duel original, écran « passe l’appareil » entre les tours. <b>Contre l’IA</b> — tu es <span class="azurC">Azur</span>, la machine est <span class="corailC">Corail</span>&nbsp;: <i>Facile</i> joue environ 60&nbsp;% de coups aléatoires légaux, <i>Normal</i> évalue gloutonnement chaque action légale (relier, bloquer, préserver). <b>En ligne — salon LOB7</b> — deux navigateurs réunis dans un même salon lob7.com.</p>
+    <h3>Game modes</h3>
+    <p><b>Same screen</b> — the original duel, with a “pass the device” screen between turns. <b>Against the AI</b> — you are <span class="azurC">Azur</span>, the machine is <span class="corailC">Corail</span>: <i>Easy</i> plays about 60&nbsp;% random legal moves, <i>Normal</i> greedily scores every legal action (connect, block, preserve). <b>Online — LOB7 room</b> — two browsers joined in a shared lob7.com room.</p>
 
-    <h3>L’IA est honnête</h3>
-    <p>Elle connaît ses cubes partout, mais ne tient compte des cubes d’<span class="azurC">Azur</span> que s’ils sont <b>visibles depuis sa caméra</b> (le Sud) ou <b>révélés par une tomographie</b> pendant son tour — jamais une position masquée. Elle raisonne donc parfois sur un plateau plus pauvre que le réel&nbsp;: c’est le prix de l’honnêteté.</p>
+    <h3>The AI is honest</h3>
+    <p>It knows its own cubes everywhere, but only takes <span class="azurC">Azur</span>’s cubes into account when they are <b>visible from its camera</b> (the South) or <b>revealed by a tomography scan</b> during its turn — never a masked position. It therefore sometimes reasons over a poorer board than the real one: that is the price of honesty.</p>
 
-    <h3>En ligne — note d’honnêteté</h3>
-    <p>Le plus petit identifiant devient <span class="azurC">Azur</span> et héberge l’arbitrage&nbsp;: seul son navigateur détient le volume complet, valide les coups et ne diffuse jamais l’état nu — à <span class="corailC">Corail</span> ne parviennent que ses propres cubes, les cubes adverses visibles depuis le Sud, les hauteurs publiques et la tomographie active. L’hôte reste un <b>arbitre technique</b>&nbsp;: son navigateur connaît physiquement l’état complet, la discrétion est donc de mise — mais rien d’invisible ne lui est jamais envoyé, et la victoire n’est proclamée que par lui.</p>
+    <h3>Online — honesty note</h3>
+    <p>The smallest identifier becomes <span class="azurC">Azur</span> and hosts the refereeing: only that browser holds the complete volume, validates moves and never broadcasts the raw state — <span class="corailC">Corail</span> only ever receives its own cubes, the enemy cubes visible from the South, the public heights and the active tomography scan. The host remains a <b>technical referee</b>: their browser physically knows the full state, so discretion is in order — but nothing invisible is ever sent to it, and victory is proclaimed by the host alone.</p>
 
-    <div class="pourquoi">Pourquoi impossible avant l’informatique : l’occultation équitable — chacun ne voit que depuis son côté — exige un écran ; sur une maquette physique, on triche en changeant d’angle.</div>
-
-    <div class="fermer"><button id="btnFermerRegles">Fermer</button></div>
+    <div class="pourquoi">Why impossible before computers: fair occlusion — each player only sees from their own side — requires a screen; on a physical model, one cheats by changing the angle.</div>
+    </div>
+    <div class="fermer"><button id="btnFermerRegles" data-i="btn.fermer">Close</button></div>
   </div>
 </div>
 
@@ -472,13 +487,314 @@
    flux de partie / rendu / entrées / boucle.
    ===================================================================== */
 
+/* ===================== I18N =====================
+   STR : table de tous les textes UI — anglais par défaut, français en
+   bascule. T(clé, args) interpole {x}. appliquerI18N() reflète la langue
+   sur le DOM statique (attributs data-i / data-i-title) ; les textes
+   dynamiques (HUD, toasts, salon…) passent tous par T(). Persistance
+   douce en sessionStorage (silencieux sous file://). « STRATES », Azur
+   et Corail ne se traduisent pas. */
+var STR = {
+  en: {
+    'doc.titre': 'STRATES — 3D Hex with gravity and hidden caverns',
+    'tagline': '3D Hex, with gravity and hidden caverns',
+    'btn.nouvelle': 'New game',
+    'btn.regles': 'Rules',
+    'btn.texturesAuto': 'Textures: auto',
+    'btn.texturesOff': 'Textures: off',
+    'tex.titre': 'Apply textures from the assets/ folder when the manifest is present (toggleable)',
+    'tex.manquant': 'No assets/manifest.js found next to the game — vector rendering.',
+    'tex.aucun': 'No assets found (assets/manifest.js) — vector rendering.',
+    'tex.on': 'Textures applied (when present).',
+    'tex.off': 'Textures off — pure vector.',
+    'btn.quitterSalon': 'Leave room',
+    'btn.miner': 'Mine this cube',
+    'btn.annuler': 'Cancel',
+    'btn.vue': 'Change view',
+    'btn.rejouer': 'Play again',
+    'btn.examiner': 'Inspect the board',
+    'btn.fermer': 'Close',
+    'btn.voir': 'See my board',
+    'btn.retourAccueil': 'Back to home',
+    'minimap.legende': 'heights — public info',
+    'hud.win.A': 'Victory — <span class="azurC">Azur</span>',
+    'hud.win.C': 'Victory — <span class="corailC">Corail</span>',
+    'hud.tour.A': '<span class="azurC">Azur</span>’s turn',
+    'hud.tour.C': '<span class="corailC">Corail</span>’s turn',
+    'hud.tourIA': '<span class="corailC">The AI (Corail)</span>’s turn',
+    'hud.demiTour': 'Half-turn {n}',
+    'hud.modeIA': ' — vs AI ({n})',
+    'hud.modeLigne': ' — online, you are {j}',
+    'hud.reserve': '{j} — reserve: <b>{n}</b> cubes',
+    'hud.scanActif': 'Tomography scan ACTIVE — X-ray of layer z={z}',
+    'hud.scanDans': 'Tomography scan in {n} half-turn{s}',
+    'hud.vue': 'View: from {cote} ({faces} faces)',
+    'cote.A': 'the West', 'cote.C': 'the South',
+    'faces.A': 'West and South', 'faces.C': 'South and East',
+    'but.A': 'link West (x=0) to East (x=3)',
+    'but.C': 'link South (y=0) to North (y=3)',
+    'niveau.facile': 'easy', 'niveau.normal': 'normal',
+    'barre.fin': 'Game over — freely inspect both viewpoints.',
+    'barre.attente': 'Opponent’s turn — only their visible view changes, hold on…',
+    'barre.ia': 'The AI is thinking…',
+    'barre.selection': 'Move this cube onto a coppery ghost — or mine it (it returns to your reserve).',
+    'barre.aide': 'PLACE: click the ground or the <i>top</i> of a column &nbsp;·&nbsp; MOVE: click your cube (side face) &nbsp;·&nbsp; MINE: double-click, M key, or button',
+    'pass.sur': 'Pass the device',
+    'pass.detail': 'You must {but} with a chain of face-touching cubes. Your camera is fixed, from {cote}: you see the {faces} faces, nothing else.',
+    'pass.vide': 'The board is empty — Azur starts.',
+    'pass.scan': 'Tomography scan this turn: layer z={z} will be X-rayed, even through the cubes.',
+    'vic.sur': 'Game over',
+    'vic.nom.A': 'Victory: Azur',
+    'vic.nom.C': 'Victory: Corail',
+    'vic.lien.A': 'Azur links West to East',
+    'vic.lien.C': 'Corail links South to North',
+    'vic.detail': '{lien} with a chain of face-touching cubes — after {n} half-turns.',
+    'vic.simul': 'Simultaneous connections: the active player wins.',
+    'vic.note': 'Occlusion played its part to the very end.',
+    'ia.badge': 'The AI is thinking…',
+    'toast.ia': 'You are Azur — the AI ({n}) plays Corail from the South. Your opening cube is already placed.',
+    'toast.aucunDep': 'No legal move — you can still mine this cube.',
+    'toast.reserveVide': 'Reserve exhausted.',
+    'toast.colonnePleine': 'Column full (height {n}).',
+    'toast.cubeAdverse': 'This cube belongs to the opponent.',
+    'toast.scan': 'Tomography scan — layer z={z} revealed for this turn.',
+    'plateau.coupe': 'slice z={z}',
+    'accueil.sur': 'Welcome to the canyon',
+    'accueil.detail': '3D Hex, with gravity and hidden caverns.<br>Choose your duel.',
+    'accueil.iaBtn': 'Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — honest: it only sees from its own side.</span>',
+    'accueil.localBtn': 'Two players — same screen<span class="sousBtn">The original duel: pass the device between turns.</span>',
+    'accueil.facileBtn': 'Against the AI — Easy<span class="sousBtn">About 60% random legal moves.</span>',
+    'accueil.ligneBtn': 'Online — LOB7 room<span class="sousBtn">Two browsers joined in a shared LOB7 room (lob7.com).</span>',
+    'accueil.regle': 'Read the rules',
+    'salon.sur': 'LOB7 room',
+    'salon.connexion': 'Connecting to the room…',
+    'salon.note': 'The smallest identifier becomes Azur — host and technical referee of the volume.',
+    'salon.relie': 'LOB7 room connected — waiting for an opponent…',
+    'salon.id': 'Your duel identifier: {id}… (the smallest becomes Azur)',
+    'deco.sur': 'Room interrupted',
+    'deco.nom': 'Game interrupted',
+    'deco.note': 'Nothing was broadcast beyond the legitimate views — the caverns stay hollow.',
+    'net.impossible': 'Online unavailable: {m}.',
+    'net.horsLob7': 'outside LOB7 — open this file inside a LOB7 room (lob7.com), not directly',
+    'net.injoignable': 'room unreachable ({c})',
+    'net.perdu': 'room connection lost ({c})',
+    'net.annonce': 'could not announce presence in the room',
+    'net.muets': 'the opponent no longer responds',
+    'net.quitte': 'the opponent left the room',
+    'net.refus': 'Move rejected by the referee: {m}. Resynchronizing…',
+    'net.revanche': 'The opponent proposes a rematch — new game.',
+    'net.m.inconnu': 'unknown action',
+    'net.m.tour': 'not your turn',
+    'net.m.pose': 'illegal placement',
+    'net.m.deplace': 'illegal move',
+    'net.m.mine': 'illegal mining',
+    'net.m.illegal': 'illegal',
+    'net.envoye': 'Move sent to the referee…',
+    'net.azur': 'You are Azur — host and referee of the volume. You start.',
+    'net.corail': 'You are Corail — Azur (host-referee) starts.',
+    'net.aToi': 'Your turn.',
+    'net.aToiScan': 'Your turn — tomography scan z={z} this turn.',
+    'net.nouvelle': 'New game — Azur starts.',
+    'net.demande': 'Rematch request sent to the host…',
+    'regles.corps': '<h2>STRATES</h2>' +
+      '<p style="color:rgba(243,229,208,.6)">3D Hex with gravity and hidden caverns — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>' +
+      '<h3>The board</h3>' +
+      '<p>A <b>4×4</b> base; each column holds up to <b>4 cubes</b>, always filled from the ground, with no holes (strict gravity). Each player has <b>16 cubes</b> in reserve; the board starts empty. <span class="azurC">Azur</span> starts.</p>' +
+      '<h3>One action per turn</h3>' +
+      '<p><b>1. PLACE</b> — a cube from your reserve on top of a column (if height &lt; 4). Click a ground cell, or the <i>top</i> of a column.</p>' +
+      '<p><b>2. MOVE</b> — one of <b>your</b> cubes to an adjacent column (±x or ±y): it lands on top. Climb of at most <b>1 level</b> (destination top ≤ cube height); free descent. The origin column compresses: whatever was above falls back. Click your cube (side face) then a coppery <span style="color:var(--cuivre)">ghost</span>.</p>' +
+      '<p><b>3. MINE</b> — remove one of <b>your</b> cubes, even a buried one: it returns to your reserve and the column compresses one notch — enemy cubes fall. A tactical weapon. Double-click your cube, press <b>M</b>, or use the “Mine” button.</p>' +
+      '<h3 class="azurC">Victory — vertical Hex</h3>' +
+      '<p><span class="azurC">Azur</span> links the <b>West</b> face (x=0) to the <b>East</b> face (x=3); <span class="corailC">Corail</span> links <b>South</b> (y=0) to <b>North</b> (y=3), through a chain of face-touching cubes — adjacency in <b>6 directions</b> (±x, ±y, ±z). Checked after every action, collapses included. Simultaneous connections: the active player wins.</p>' +
+      '<h3>Occlusion — the heart of the game</h3>' +
+      '<p>Each player sees the board from <b>their own</b> side, with a <b>fixed</b> isometric camera: Azur from the West, Corail from the South. A low cube hidden behind a tall column is <b>invisible</b>: ambush is legal. No free rotation. Between turns, the “Pass the device” screen protects both views.</p>' +
+      '<h3>Tomography</h3>' +
+      '<p>Every <b>8 half-turns</b>, one random horizontal layer (z = 0 to 3) goes into <b>X-ray</b> for the whole turn: its cubes — even occluded — appear as a translucent see-through overlay. Public and momentary.</p>' +
+      '<h3>Minimap</h3>' +
+      '<p>Top right: the grid seen from above with the physical <b>height</b> of each column — public information. Colors, however, can only be seen from your own side.</p>' +
+      '<h3>Game modes</h3>' +
+      '<p><b>Same screen</b> — the original duel, with a “pass the device” screen between turns. <b>Against the AI</b> — you are <span class="azurC">Azur</span>, the machine is <span class="corailC">Corail</span>: <i>Easy</i> plays about 60&nbsp;% random legal moves, <i>Normal</i> greedily scores every legal action (connect, block, preserve). <b>Online — LOB7 room</b> — two browsers joined in a shared lob7.com room.</p>' +
+      '<h3>The AI is honest</h3>' +
+      '<p>It knows its own cubes everywhere, but only takes <span class="azurC">Azur</span>’s cubes into account when they are <b>visible from its camera</b> (the South) or <b>revealed by a tomography scan</b> during its turn — never a masked position. It therefore sometimes reasons over a poorer board than the real one: that is the price of honesty.</p>' +
+      '<h3>Online — honesty note</h3>' +
+      '<p>The smallest identifier becomes <span class="azurC">Azur</span> and hosts the refereeing: only that browser holds the complete volume, validates moves and never broadcasts the raw state — <span class="corailC">Corail</span> only ever receives its own cubes, the enemy cubes visible from the South, the public heights and the active tomography scan. The host remains a <b>technical referee</b>: their browser physically knows the full state, so discretion is in order — but nothing invisible is ever sent to it, and victory is proclaimed by the host alone.</p>' +
+      '<div class="pourquoi">Why impossible before computers: fair occlusion — each player only sees from their own side — requires a screen; on a physical model, one cheats by changing the angle.</div>'
+  },
+  fr: {
+    'doc.titre': 'STRATES — Hex en 3D, avec gravité et cavernes cachées',
+    'tagline': 'Hex en 3D, avec gravité et cavernes cachées',
+    'btn.nouvelle': 'Nouvelle partie',
+    'btn.regles': 'Règles',
+    'btn.texturesAuto': 'Textures&nbsp;: auto',
+    'btn.texturesOff': 'Textures&nbsp;: off',
+    'tex.titre': 'Plaquer les textures du dossier assets/ si le manifeste est présent (mode débrayable)',
+    'tex.manquant': 'Aucun assets/manifest.js trouvé à côté du jeu — rendu vectoriel.',
+    'tex.aucun': 'Aucun asset détecté (assets/manifest.js) — rendu vectoriel.',
+    'tex.on': 'Textures plaquées (si présentes).',
+    'tex.off': 'Textures débrayées — vectoriel pur.',
+    'btn.quitterSalon': 'Quitter le salon',
+    'btn.miner': 'Miner ce cube',
+    'btn.annuler': 'Annuler',
+    'btn.vue': 'Changer de vue',
+    'btn.rejouer': 'Rejouer',
+    'btn.examiner': 'Examiner le plateau',
+    'btn.fermer': 'Fermer',
+    'btn.voir': 'Voir mon plateau',
+    'btn.retourAccueil': 'Retour à l’accueil',
+    'minimap.legende': 'hauteurs — info publique',
+    'hud.win.A': 'Victoire <span class="azurC">de l’Azur</span>',
+    'hud.win.C': 'Victoire <span class="corailC">du Corail</span>',
+    'hud.tour.A': 'Au tour <span class="azurC">d’Azur</span>',
+    'hud.tour.C': 'Au tour <span class="corailC">du Corail</span>',
+    'hud.tourIA': 'Au tour <span class="corailC">de l’IA (Corail)</span>',
+    'hud.demiTour': 'Demi-tour {n}',
+    'hud.modeIA': ' — contre l’IA ({n})',
+    'hud.modeLigne': ' — en ligne, tu es {j}',
+    'hud.reserve': '{j}&nbsp;— réserve&nbsp;: <b>{n}</b> cubes',
+    'hud.scanActif': 'Tomographie ACTIVE — radiographie de la couche z={z}',
+    'hud.scanDans': 'Tomographie&nbsp;: dans {n} demi-tour{s}',
+    'hud.vue': 'Vue : depuis {cote} (faces {faces})',
+    'cote.A': 'l’Ouest', 'cote.C': 'le Sud',
+    'faces.A': 'Ouest et Sud', 'faces.C': 'Sud et Est',
+    'but.A': 'relier l’Ouest (x=0) à l’Est (x=3)',
+    'but.C': 'relier le Sud (y=0) au Nord (y=3)',
+    'niveau.facile': 'facile', 'niveau.normal': 'normal',
+    'barre.fin': 'Partie terminée — libre inspection des deux points de vue.',
+    'barre.attente': 'Au tour de l’adversaire — seule sa vue visible change, patience…',
+    'barre.ia': 'L’IA réfléchit…',
+    'barre.selection': 'Déplace ce cube vers un fantôme cuivré — ou mine-le (il rentre en réserve).',
+    'barre.aide': 'POSER&nbsp;: clique le sol ou le <i>dessus</i> d’une colonne &nbsp;·&nbsp; DÉPLACER&nbsp;: clique ton cube (face latérale) &nbsp;·&nbsp; MINER&nbsp;: double-clic, touche M, ou bouton',
+    'pass.sur': 'Passe l’appareil',
+    'pass.detail': 'Tu dois {but} par une chaîne de cubes tangents. Ta caméra est fixe, depuis {cote} : tu vois les faces {faces}, rien d’autre.',
+    'pass.vide': 'Le plateau est vide — Azur commence.',
+    'pass.scan': 'Tomographie ce tour : la couche z={z} sera révélée en radiographie, même à travers les cubes.',
+    'vic.sur': 'Fin de partie',
+    'vic.nom.A': 'Victoire de l’Azur',
+    'vic.nom.C': 'Victoire du Corail',
+    'vic.lien.A': 'L’Azur relie l’Ouest à l’Est',
+    'vic.lien.C': 'Le Corail relie le Sud au Nord',
+    'vic.detail': '{lien} par une chaîne de cubes tangents face à face — après {n} demi-tours.',
+    'vic.simul': 'Connexions simultanées : la victoire revient au joueur actif.',
+    'vic.note': 'L’occultation a joué son rôle jusqu’au bout.',
+    'ia.badge': 'L’IA réfléchit…',
+    'toast.ia': 'Tu es Azur — l’IA ({n}) joue Corail depuis le Sud. Ton cube d’ouverture est déjà posé.',
+    'toast.aucunDep': 'Aucun déplacement légal — tu peux encore miner ce cube.',
+    'toast.reserveVide': 'Réserve épuisée.',
+    'toast.colonnePleine': 'Colonne pleine (hauteur {n}).',
+    'toast.cubeAdverse': 'Ce cube appartient à l’adversaire.',
+    'toast.scan': 'Tomographie — couche z={z} révélée pendant ce tour.',
+    'plateau.coupe': 'coupe z={z}',
+    'accueil.sur': 'Bienvenue au canyon',
+    'accueil.detail': 'Hex en 3D, avec gravité et cavernes cachées.<br>Choisis ton mode de duel.',
+    'accueil.iaBtn': 'Jouer contre l’IA<span class="sousBtn">Tu es Azur, la machine est Corail (niveau Normal) — honnête, elle ne voit que depuis son côté.</span>',
+    'accueil.localBtn': 'Deux joueurs — même écran<span class="sousBtn">Le duel original : on se passe l’appareil entre les tours.</span>',
+    'accueil.facileBtn': 'Contre l’IA — Facile<span class="sousBtn">Environ 60&nbsp;% de coups aléatoires légaux.</span>',
+    'accueil.ligneBtn': 'En ligne — salon LOB7<span class="sousBtn">Deux navigateurs réunis dans un même salon LOB7 (lob7.com).</span>',
+    'accueil.regle': 'Lire les règles',
+    'salon.sur': 'Salon LOB7',
+    'salon.connexion': 'Connexion au salon…',
+    'salon.note': 'Le plus petit identifiant devient Azur — hôte et arbitre technique du volume.',
+    'salon.relie': 'Salon LOB7 relié — en attente d’un adversaire…',
+    'salon.id': 'Ton identifiant de duel : {id}… (le plus petit devient Azur)',
+    'deco.sur': 'Salon interrompu',
+    'deco.nom': 'Partie interrompue',
+    'deco.note': 'Rien n’a été diffusé au-delà des vues légitimes — les cavernes restent caves.',
+    'net.impossible': 'En ligne impossible : {m}.',
+    'net.horsLob7': 'hors LOB7 — ouvre ce fichier dans un salon LOB7 (lob7.com), pas en direct',
+    'net.injoignable': 'salon injoignable ({c})',
+    'net.perdu': 'connexion au salon perdue ({c})',
+    'net.annonce': 'impossible d’annoncer sa présence dans le salon',
+    'net.muets': 'l’adversaire ne répond plus',
+    'net.quitte': 'l’adversaire a quitté le salon',
+    'net.refus': 'Coup refusé par l’arbitre : {m}. Résynchronisation…',
+    'net.revanche': 'L’adversaire propose une revanche — nouvelle partie.',
+    'net.m.inconnu': 'action inconnue',
+    'net.m.tour': 'ce n’est pas ton tour',
+    'net.m.pose': 'pose illégale',
+    'net.m.deplace': 'déplacement illégal',
+    'net.m.mine': 'minage illégal',
+    'net.m.illegal': 'illégal',
+    'net.envoye': 'Coup envoyé à l’arbitre…',
+    'net.azur': 'Tu es Azur — hôte et arbitre du volume. Tu commences.',
+    'net.corail': 'Tu es Corail — l’Azur (hôte-arbitre) commence.',
+    'net.aToi': 'À toi de jouer.',
+    'net.aToiScan': 'À toi de jouer — tomographie z={z} ce tour.',
+    'net.nouvelle': 'Nouvelle partie — Azur commence.',
+    'net.demande': 'Demande de revanche envoyée à l’hôte…',
+    'regles.corps': '<h2>STRATES</h2>' +
+      '<p style="color:rgba(243,229,208,.6)">Hex en 3D, avec gravité et cavernes cachées — duel au tour par tour&nbsp;: deux joueurs sur le même écran, contre l’IA, ou en ligne dans un salon LOB7.</p>' +
+      '<h3>Le plateau</h3>' +
+      '<p>Une base <b>4×4</b> ; chaque colonne accueille jusqu’à <b>4 cubes</b>, toujours remplie depuis le sol, sans trou (gravité stricte). Chaque joueur dispose de <b>16 cubes</b> en réserve ; le plateau est vide au départ. <span class="azurC">Azur</span> commence.</p>' +
+      '<h3>À son tour, une seule action</h3>' +
+      '<p><b>1. POSER</b> — un cube de réserve au sommet d’une colonne (si hauteur &lt; 4). Clique une case du sol, ou le <i>dessus</i> d’une colonne.</p>' +
+      '<p><b>2. DÉPLACER</b> — un de <b>tes</b> cubes vers une colonne adjacente (±x ou ±y)&nbsp;: il atterrit au sommet. Montée d’au plus <b>1 niveau</b> (sommet destination ≤ hauteur du cube)&nbsp;; descente libre. La colonne d’origine se compresse&nbsp;: ce qui était au-dessus retombe. Clique ton cube (face latérale) puis un fantôme <span style="color:var(--cuivre)">cuivré</span>.</p>' +
+      '<p><b>3. MINER</b> — retire un de <b>tes</b> cubes, même enfoui&nbsp;: il retourne en réserve et la colonne se compresse d’un cran — les cubes adverses tombent. Arme tactique. Double-clic sur ton cube, touche <b>M</b>, ou bouton « Miner ».</p>' +
+      '<h3 class="azurC">Victoire — hex vertical</h3>' +
+      '<p><span class="azurC">Azur</span> relie la face <b>Ouest</b> (x=0) à la face <b>Est</b> (x=3)&nbsp;; <span class="corailC">Corail</span> relie le <b>Sud</b> (y=0) au <b>Nord</b> (y=3), par une chaîne de cubes tangents face à face — adjacence en <b>6 directions</b> (±x, ±y, ±z). Vérifiée après chaque action, effondrements compris. Connexions simultanées&nbsp;: le joueur actif gagne.</p>' +
+      '<h3>Occultation — le cœur du jeu</h3>' +
+      '<p>Chaque joueur voit le plateau depuis <b>son</b> côté, en caméra isométrique <b>fixe</b>&nbsp;: Azur depuis l’Ouest, Corail depuis le Sud. Un cube bas dissimulé derrière une colonne haute est <b>invisible</b>&nbsp;: l’embuscade est légale. Aucune rotation libre. Entre les tours, l’écran « Passe l’appareil » protège les deux vues.</p>' +
+      '<h3>Tomographie</h3>' +
+      '<p>Tous les <b>8 demi-tours</b>, une couche horizontale aléatoire (z = 0 à 3) passe en <b>radiographie</b> pendant tout le tour&nbsp;: ses cubes — même occlus — apparaissent en surimpression translucide traversante. Public et momentané.</p>' +
+      '<h3>Minimap</h3>' +
+      '<p>En haut à droite&nbsp;: la grille vue de dessus avec la <b>hauteur</b> physique de chaque colonne — information publique. Les couleurs, elles, ne se voient que depuis son côté.</p>' +
+      '<h3>Modes de jeu</h3>' +
+      '<p><b>Même écran</b> — le duel original, écran « passe l’appareil » entre les tours. <b>Contre l’IA</b> — tu es <span class="azurC">Azur</span>, la machine est <span class="corailC">Corail</span>&nbsp;: <i>Facile</i> joue environ 60&nbsp;% de coups aléatoires légaux, <i>Normal</i> évalue gloutonnement chaque action légale (relier, bloquer, préserver). <b>En ligne — salon LOB7</b> — deux navigateurs réunis dans un même salon lob7.com.</p>' +
+      '<h3>L’IA est honnête</h3>' +
+      '<p>Elle connaît ses cubes partout, mais ne tient compte des cubes d’<span class="azurC">Azur</span> que s’ils sont <b>visibles depuis sa caméra</b> (le Sud) ou <b>révélés par une tomographie</b> pendant son tour — jamais une position masquée. Elle raisonne donc parfois sur un plateau plus pauvre que le réel&nbsp;: c’est le prix de l’honnêteté.</p>' +
+      '<h3>En ligne — note d’honnêteté</h3>' +
+      '<p>Le plus petit identifiant devient <span class="azurC">Azur</span> et héberge l’arbitrage&nbsp;: seul son navigateur détient le volume complet, valide les coups et ne diffuse jamais l’état nu — à <span class="corailC">Corail</span> ne parviennent que ses propres cubes, les cubes adverses visibles depuis le Sud, les hauteurs publiques et la tomographie active. L’hôte reste un <b>arbitre technique</b>&nbsp;: son navigateur connaît physiquement l’état complet, la discrétion est donc de mise — mais rien d’invisible ne lui est jamais envoyé, et la victoire n’est proclamée que par lui.</p>' +
+      '<div class="pourquoi">Pourquoi impossible avant l’informatique&nbsp;: l’occultation équitable — chacun ne voit que depuis son côté — exige un écran ; sur une maquette physique, on triche en changeant d’angle.</div>'
+  }
+};
+
+var LANG = 'en';
+try {
+  var lgBoot = sessionStorage.getItem('strates-lang');
+  if (lgBoot === 'fr' || lgBoot === 'en') LANG = lgBoot;
+} catch (e) { /* stockage indisponible (file:// strict) : reste en anglais */ }
+
+function T(key, args) {
+  var s = STR[LANG][key] !== undefined ? STR[LANG][key] : STR.en[key];
+  if (s === undefined) return key;
+  if (args) {
+    for (var k in args) s = s.split('{' + k + '}').join(args[k]);
+  }
+  return s;
+}
+
+function appliquerI18N() {
+  document.documentElement.lang = LANG;
+  document.title = T('doc.titre');
+  var i, liste = document.querySelectorAll('[data-i]');
+  for (i = 0; i < liste.length; i++) {
+    var cle = liste[i].getAttribute('data-i');
+    liste[i].innerHTML = (STR[LANG][cle] !== undefined ? STR[LANG][cle] : STR.en[cle]);
+  }
+  liste = document.querySelectorAll('[data-i-title]');
+  for (i = 0; i < liste.length; i++) liste[i].title = T(liste[i].getAttribute('data-i-title'));
+  $('btnLangue').textContent = (LANG === 'en' ? 'FR' : 'EN');
+  $('btnLangueAccueil').textContent = (LANG === 'en' ? 'FR' : 'EN');
+  $('btnTextures').innerHTML = T(Assets.actif ? 'btn.texturesAuto' : 'btn.texturesOff');
+  $('btnTextures').title = Assets.manifestAbsent ? T('tex.manquant') : T('tex.titre');
+}
+
+function changerLangue(lg) {
+  if (lg !== 'en' && lg !== 'fr') return;
+  LANG = lg;
+  try { sessionStorage.setItem('strates-lang', LANG); } catch (e) { /* silencieux */ }
+  appliquerI18N();
+  if (S.phase === 'passage' && !$('passage').classList.contains('cache')) afficherPassage();
+  if (S.phase === 'fin' && S.gagnant) afficherVictoire();
+  majHUD();
+}
+
 /* ===================== CONFIG ===================== */
 var SCAN_PERIODE = 8;          // tomographie tous les 8 demi-tours
 var HMAX = 4, N = 4, RESERVE_INIT = 16;
 
 var JOUEURS = {
-  A: { nom: 'Azur',   couleur: '#6ec8ff', but: 'relier l’Ouest (x=0) à l’Est (x=3)' },
-  C: { nom: 'Corail', couleur: '#ff9166', but: 'relier le Sud (y=0) au Nord (y=3)' }
+  A: { nom: 'Azur',   couleur: '#6ec8ff' },   // but → STR['but.A']
+  C: { nom: 'Corail', couleur: '#ff9166' }    // but → STR['but.C']
 };
 
 /* Caméras isométriques fixes. u,v = coordonnées vue ; l'algorithme du
@@ -486,10 +802,11 @@ var JOUEURS = {
    Azur : depuis l'Ouest (coin sud-ouest, faces visibles Ouest + Sud).
    Corail : depuis le Sud (coin sud-est, faces visibles Sud + Est).
    Les transformées signées donnent u,v ∈ [-3.5, 3.5] : toute la géométrie
-   est calculée à partir des coins transformés (aucun côté codé en dur). */
+   est calculée à partir des coins transformés (aucun côté codé en dur).
+   Libellés de côté/faces → STR['cote.*'] et STR['faces.*']. */
 var CAMERAS = {
-  A: { uv: function (x, y) { return [-x, -y]; }, cote: 'l’Ouest', faces: 'Ouest et Sud' },
-  C: { uv: function (x, y) { return [-y,  x]; }, cote: 'le Sud',  faces: 'Sud et Est' }
+  A: { uv: function (x, y) { return [-x, -y]; } },
+  C: { uv: function (x, y) { return [-y,  x]; } }
 };
 /* Côtés du plateau en coordonnées plateau (bords extérieurs du socle). */
 var COTES = [
@@ -498,6 +815,9 @@ var COTES = [
   { a: [-0.5, -0.5], b: [3.5, -0.5], lab: 'S', joueur: 'C' },
   { a: [-0.5, 3.5],  b: [3.5, 3.5],  lab: 'N', joueur: 'C' }
 ];
+/* Étiquettes cardinales par langue (indice COTES : 0=Ouest 1=Est 2=Sud 3=Nord). */
+var LABS_COTES = { en: ['W', 'E', 'S', 'N'], fr: ['O', 'E', 'S', 'N'] };
+function labCote(i) { return (LABS_COTES[LANG] && LABS_COTES[LANG][i]) || COTES[i].lab; }
 var COINS_SOCLE = [[-0.5, -0.5], [3.5, -0.5], [3.5, 3.5], [-0.5, 3.5]];
 function bornesVue(cam) {
   var us = [], vs = [], i, uv;
@@ -789,17 +1109,22 @@ function appliquerActionIA(a) {
   terminerTour();
 }
 
-/* Tour IA : pas d'écran de passage, « L'IA réfléchit… » ~800 ms, puis
-   action appliquée avec le rendu et le flux normaux. */
+/* Tour IA : pas d'écran de passage, badge « réfléchit » ~800 ms, puis
+   action appliquée avec le rendu et le flux normaux. IA_DELAI_REPONSE
+   permet une réponse accélérée ponctuelle (premier coup après l'ouverture
+   automatique, pour la capture d'écran de la plateforme). */
+var IA_DELAI_REPONSE = 0;
 function lancerTourIA() {
   S.phase = 'iaReflechi';
   majHUD();
+  var delai = IA_DELAI_REPONSE || (750 + Math.floor(Math.random() * 350));
+  IA_DELAI_REPONSE = 0;
   setTimeout(function () {
     if (MODE !== 'ia' || S.phase !== 'iaReflechi' || S.joueur !== 'C') return;
     var a = choisirActionIA();
     if (a) appliquerActionIA(a);
     else terminerTour();          // sécurité : aucune action légale
-  }, 750 + Math.floor(Math.random() * 350));
+  }, delai);
 }
 
 /* ===================== ASSETS (couche optionnelle) =====================
@@ -819,7 +1144,7 @@ var Assets = {
       self.manifestAbsent = true;
       var b = document.getElementById('btnTextures');
       b.classList.add('discret');
-      b.title = 'Aucun assets/manifest.js trouvé à côté du jeu — rendu vectoriel.';
+      b.title = T('tex.manquant');
     };
     document.head.appendChild(s);
   },
@@ -885,26 +1210,26 @@ function toast(txt, duree) {
 }
 
 function majHUD() {
-  var j = S.joueur, J = JOUEURS[j];
+  var j = S.joueur;
   var tour = $('tourLigne');
   if (S.phase === 'fin' && S.gagnant) {
-    tour.innerHTML = 'Victoire <span class="' + (S.gagnant === 'A' ? 'azurC' : 'corailC') + '">' +
-      (S.gagnant === 'A' ? 'de l’Azur' : 'du Corail') + '</span>';
+    tour.innerHTML = T('hud.win.' + S.gagnant);
   } else if (MODE === 'ia' && j === 'C') {
-    tour.innerHTML = 'Au tour <span class="corailC">de l’IA (Corail)</span>';
+    tour.innerHTML = T('hud.tourIA');
   } else {
-    tour.innerHTML = 'Au tour <span class="' + (j === 'A' ? 'azurC' : 'corailC') + '">' +
-      (j === 'A' ? 'd’Azur' : 'du Corail') + '</span>';
+    tour.innerHTML = T('hud.tour.' + j);
   }
   var modeTxt = '';
-  if (MODE === 'ia') modeTxt = ' — contre l’IA (' + IA_NIVEAU + ')';
-  else if (MODE === 'enligne') modeTxt = ' — en ligne, tu es ' + (NET.moi === 'A' ? 'Azur' : 'Corail');
-  $('dtLigne').textContent = 'Demi-tour ' + S.demiTour + modeTxt;
+  if (MODE === 'ia') modeTxt = T('hud.modeIA', { n: T('niveau.' + IA_NIVEAU) });
+  else if (MODE === 'enligne') modeTxt = T('hud.modeLigne', { j: NET.moi === 'A' ? 'Azur' : 'Corail' });
+  $('dtLigne').textContent = T('hud.demiTour', { n: S.demiTour }) + modeTxt;
   $('iaBadge').classList.toggle('cache', !(MODE === 'ia' && S.phase === 'iaReflechi'));
   $('btnQuitterSalon').classList.toggle('cache', MODE !== 'enligne');
   $('btnNouvelle').classList.toggle('cache', MODE === 'enligne');
-  $('resA').textContent = S.reserve.A;
-  $('resC').textContent = S.reserve.C;
+  $('ligneResA').innerHTML = '<span class="pastille azurBg"></span>' +
+    T('hud.reserve', { j: 'Azur', n: S.reserve.A });
+  $('ligneResC').innerHTML = '<span class="pastille corailBg"></span>' +
+    T('hud.reserve', { j: 'Corail', n: S.reserve.C });
 
   var sl = $('scanLigne');
   sl.classList.toggle('actif', !!S.scan);
@@ -914,13 +1239,13 @@ function majHUD() {
     '<path d="M12 6.5a5.5 5.5 0 0 1 5.5 5.5" opacity=".55"/></svg>';
   var im = Assets.asset('common/icone_scan');
   if (im) ico = '<img src="' + im.src + '" alt="scan">';
+  var reste = SCAN_PERIODE - (S.demiTour % SCAN_PERIODE);
   sl.innerHTML = '<span id="icoScan">' + ico + '</span><span>' +
-    (S.scan ? 'Tomographie ACTIVE — radiographie de la couche z=' + S.scan.z
-            : 'Tomographie : dans ' + (SCAN_PERIODE - (S.demiTour % SCAN_PERIODE)) + ' demi-tour' +
-              ((SCAN_PERIODE - (S.demiTour % SCAN_PERIODE)) > 1 ? 's' : '')) + '</span>';
+    (S.scan ? T('hud.scanActif', { z: S.scan.z })
+            : T('hud.scanDans', { n: reste, s: reste > 1 ? 's' : '' })) + '</span>';
 
-  $('vueLigne').textContent = 'Vue : depuis ' + CAMERAS[cameraActive()].cote +
-    ' (faces ' + CAMERAS[cameraActive()].faces + ')';
+  var cam = cameraActive();
+  $('vueLigne').textContent = T('hud.vue', { cote: T('cote.' + cam), faces: T('faces.' + cam) });
   majBarre();
 }
 
@@ -932,21 +1257,20 @@ function majBarre() {
   $('btnRejouerFin').style.display = 'none';
   b.classList.remove('avecSelection');
   if (S.phase === 'fin') {
-    $('txtAction').textContent = 'Partie terminée — libre inspection des deux points de vue.';
+    $('txtAction').textContent = T('barre.fin');
     $('btnVue').style.display = '';
     $('btnRejouerFin').style.display = '';
   } else if (S.phase === 'attente') {
-    $('txtAction').textContent = 'Au tour de l’adversaire — seule sa vue visible change, patience…';
+    $('txtAction').textContent = T('barre.attente');
   } else if (S.phase === 'iaReflechi') {
-    $('txtAction').textContent = 'L’IA réfléchit…';
+    $('txtAction').textContent = T('barre.ia');
   } else if (S.selection) {
-    $('txtAction').textContent = 'Déplace ce cube vers un fantôme cuivré — ou mine-le (il rentre en réserve).';
+    $('txtAction').textContent = T('barre.selection');
     $('btnMiner').style.display = '';
     $('btnAnnuler').style.display = '';
     b.classList.add('avecSelection');
   } else {
-    $('txtAction').innerHTML = 'POSER : clique le sol ou le <i>dessus</i> d’une colonne &nbsp;·&nbsp; ' +
-      'DÉPLACER : clique ton cube (face latérale) &nbsp;·&nbsp; MINER : double-clic, touche M, ou bouton';
+    $('txtAction').innerHTML = T('barre.aide');
   }
 }
 
@@ -962,14 +1286,21 @@ function nouvellePartie() {
     else {
       netEnvoyer({ type: 'rejouer', clientId: NET.monId });
       S.phase = 'attente'; S.joueur = 'A';
-      toast('Demande de revanche envoyée à l’hôte…');
+      toast(T('net.demande'));
       majHUD();
     }
     return;
   }
   if (MODE === 'ia') {
     S.phase = 'jeu';
-    toast('Tu es Azur — l’IA (' + IA_NIVEAU + ') joue Corail depuis le Sud.', 3200);
+    toast(T('toast.ia', { n: T('niveau.' + IA_NIVEAU) }), 3600);
+    /* Ouverture automatique d'Azur (capture automatique de la plateforme) :
+       un cube bleu posé au centre du plateau dès le lancement, puis Corail
+       répond rapidement (~600 ms) — la capture montre deux cubes posés.
+       Coup 100 % légal : plateau vide, réserve pleine. */
+    IA_DELAI_REPONSE = 600;
+    poser(S, 2, 1);
+    terminerTour();          // passe la main à Corail → lancerTourIA()
     majHUD();
     return;
   }
@@ -982,13 +1313,11 @@ function afficherPassage() {
   var j = S.joueur, J = JOUEURS[j];
   $('passNom').textContent = (j === 'A' ? 'Azur' : 'Corail');
   $('passNom').style.color = J.couleur;
-  var d = 'Tu dois ' + J.but + ' par une chaîne de cubes tangents.';
-  d += ' Ta caméra est fixe, depuis ' + CAMERAS[j].cote + ' : tu vois les faces ' + CAMERAS[j].faces + ', rien d’autre.';
-  $('passDetail').textContent = d;
+  $('passDetail').textContent = T('pass.detail',
+    { but: T('but.' + j), cote: T('cote.' + j), faces: T('faces.' + j) });
   var notes = [];
-  if (S.demiTour === 1) notes.push('Le plateau est vide — Azur commence.');
-  if (S.scan) notes.push('Tomographie ce tour : la couche z=' + S.scan.z +
-    ' sera révélée en radiographie, même à travers les cubes.');
+  if (S.demiTour === 1) notes.push(T('pass.vide'));
+  if (S.scan) notes.push(T('pass.scan', { z: S.scan.z }));
   $('passNote').innerHTML = notes.join('<br>');
   $('passage').classList.remove('cache');
 }
@@ -997,11 +1326,11 @@ function commencerTour() {
   $('passage').classList.add('cache');
   S.phase = 'jeu';
   majHUD();
-  if (S.scan) toast('Tomographie — couche z=' + S.scan.z + ' révélée pendant ce tour.', 3400);
+  if (S.scan) toast(T('toast.scan', { z: S.scan.z }), 3400);
 }
 
 function toastScan() {
-  if (S.scan) toast('Tomographie — couche z=' + S.scan.z + ' révélée pendant ce tour.', 3400);
+  if (S.scan) toast(T('toast.scan', { z: S.scan.z }), 3400);
 }
 
 function terminerTour() {
@@ -1036,20 +1365,18 @@ function terminerTour() {
 
 function afficherVictoire() {
   var J = JOUEURS[S.gagnant];
-  $('vicNom').textContent = 'Victoire ' + (S.gagnant === 'A' ? 'de l’Azur' : 'du Corail');
+  $('vicNom').textContent = T('vic.nom.' + S.gagnant);
   $('vicNom').style.color = J.couleur;
-  $('vicDetail').textContent = (S.gagnant === 'A' ? 'L’Azur relie l’Ouest à l’Est' : 'Le Corail relie le Sud au Nord') +
-    ' par une chaîne de cubes tangents face à face — après ' + S.demiTour + ' demi-tours.';
-  $('vicNote').textContent = S.simultane
-    ? 'Connexions simultanées : la victoire revient au joueur actif.'
-    : 'L’occultation a joué son rôle jusqu’au bout.';
+  $('vicDetail').textContent = T('vic.detail',
+    { lien: T('vic.lien.' + S.gagnant), n: S.demiTour });
+  $('vicNote').textContent = S.simultane ? T('vic.simul') : T('vic.note');
   $('victoire').classList.remove('cache');
 }
 
 function selectionner(x, y, z) {
   S.selection = { x: x, y: y, z: z };
   S.dests = dests(S, x, y, z);
-  if (!S.dests.length) toast('Aucun déplacement légal — tu peux encore miner ce cube.');
+  if (!S.dests.length) toast(T('toast.aucunDep'));
   majBarre();
 }
 function deselectionner() {
@@ -1062,8 +1389,8 @@ function deselectionner() {
    (Azur), application locale optimiste puis resynchronisation par la vue. */
 function actionPoser(x, y) {
   if (!legalPose(S, x, y)) {
-    if (S.reserve[S.joueur] <= 0) toast('Réserve épuisée.');
-    else toast('Colonne pleine (hauteur ' + HMAX + ').');
+    if (S.reserve[S.joueur] <= 0) toast(T('toast.reserveVide'));
+    else toast(T('toast.colonnePleine', { n: HMAX }));
     return;
   }
   if (MODE === 'enligne' && NET.moi === 'C') {
@@ -1371,7 +1698,7 @@ function dessinerPlateau(t) {
     var mx = (a2.x + b2.x) / 2, my = (a2.y + b2.y) / 2;
     var dx = mx - ctr.x, dy = my - ctr.y, nrm = Math.hypot(dx, dy) || 1;
     ctx.fillStyle = 'rgba(243,229,208,.55)';
-    ctx.fillText(COTES[cs].lab, mx + dx / nrm * L.tw * 1.05, my + dy / nrm * L.tw * 1.05);
+    ctx.fillText(labCote(cs), mx + dx / nrm * L.tw * 1.05, my + dy / nrm * L.tw * 1.05);
   }
 
   /* repère de la tranche tomographiée */
@@ -1393,7 +1720,7 @@ function dessinerPlateau(t) {
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(243,229,208,.8)';
     ctx.font = 'italic ' + Math.round(Math.max(10, Math.min(22, L.tw * 0.14))) + 'px Georgia, serif';
-    ctx.fillText('coupe z=' + zs, eq[0].x, eq[0].y - Math.max(10, L.tw * 0.16));
+    ctx.fillText(T('plateau.coupe', { z: zs }), eq[0].x, eq[0].y - Math.max(10, L.tw * 0.16));
     ctx.restore();
   }
 
@@ -1494,7 +1821,7 @@ function rendreMinimap() {
     var pp = pm(mc[0], mc[1]);
     var dx = pp.x - ctr.x, dy = pp.y - ctr.y, n2 = Math.hypot(dx, dy) || 1;
     mctx.fillStyle = 'rgba(243,229,208,.6)';
-    mctx.fillText(COTES[j2].lab, pp.x + dx / n2 * 13, pp.y + dy / n2 * 13);
+    mctx.fillText(labCote(j2), pp.x + dx / n2 * 13, pp.y + dy / n2 * 13);
   }
 }
 
@@ -1543,9 +1870,9 @@ function gererClic(h) {
     if (propre && posable && h.face !== 'haut') { selectionner(h.x, h.y, h.z); return; }
     if (posable) { actionPoser(h.x, h.y); return; }
     if (propre) { selectionner(h.x, h.y, h.z); return; }
-    if (h.face === 'haut' && hcol >= HMAX) { toast('Colonne pleine (hauteur ' + HMAX + ').'); return; }
+    if (h.face === 'haut' && hcol >= HMAX) { toast(T('toast.colonnePleine', { n: HMAX })); return; }
     deselectionner();
-    toast('Ce cube appartient à l’adversaire.');
+    toast(T('toast.cubeAdverse'));
   }
 }
 
@@ -1583,14 +1910,15 @@ function brancherEntrees() {
   $('regles').addEventListener('click', function (ev) {
     if (ev.target === $('regles')) $('regles').classList.add('cache');
   });
+  $('btnLangue').addEventListener('click', function () { changerLangue(LANG === 'en' ? 'fr' : 'en'); });
   $('btnTextures').addEventListener('click', function () {
     if (Assets.manifestAbsent && !Object.keys(Assets.entrees).length) {
-      toast('Aucun asset détecté (assets/manifest.js) — rendu vectoriel.');
+      toast(T('tex.aucun'));
       return;
     }
     Assets.actif = !Assets.actif;
-    $('btnTextures').textContent = 'Textures : ' + (Assets.actif ? 'auto' : 'off');
-    toast(Assets.actif ? 'Textures plaquées (si présentes).' : 'Textures débrayées — vectoriel pur.');
+    $('btnTextures').innerHTML = T(Assets.actif ? 'btn.texturesAuto' : 'btn.texturesOff');
+    toast(Assets.actif ? T('tex.on') : T('tex.off'));
     majHUD();
   });
   $('btnVoir').addEventListener('click', commencerTour);
@@ -1685,8 +2013,6 @@ function afficherAccueil() {
   $('passage').classList.add('cache');
   $('deco').classList.add('cache');
   $('salonAttente').classList.add('cache');
-  $('etapeIA').classList.add('cache');
-  $('menuPrincipal').classList.remove('cache');
   $('accueilNote').textContent = '';
   $('accueil').classList.remove('cache');
   majHUD();
@@ -1704,38 +2030,38 @@ function noteAccueil(txt) {
 
 function tenterEnLigne() {
   if (!window.LOB7Rooms || typeof window.LOB7Rooms.connect !== 'function') {
-    retourSalonImpossible('SDK LOB7 absent de la page');
+    retourSalonImpossible(T('net.injoignable', { c: 'SDK' }));
     return;
   }
-  $('salonEtat').textContent = 'Connexion au salon…';
+  $('salonEtat').textContent = T('salon.connexion');
   $('salonId').textContent = '';
   $('salonAttente').classList.remove('cache');
   window.LOB7Rooms.connect().then(demarrerSalon).catch(function (e) {
     var motif = (e && e.code === 'ROOM_PREVIEW_REQUIRED')
-      ? 'hors LOB7 — ouvre ce fichier dans un salon LOB7 (lob7.com), pas en direct'
-      : 'salon injoignable (' + ((e && e.code) || 'erreur') + ')';
+      ? T('net.horsLob7')
+      : T('net.injoignable', { c: (e && e.code) || 'error' });
     retourSalonImpossible(motif);
   });
 }
 function retourSalonImpossible(motif) {
   $('salonAttente').classList.add('cache');
   $('accueil').classList.remove('cache');
-  noteAccueil('En ligne impossible : ' + motif + '.');
+  noteAccueil(T('net.impossible', { m: motif }));
 }
 
 function demarrerSalon(conn) {
   NET.actif = true; NET.conn = conn; NET.monId = idSalon();
   NET.cles = {}; NET.maSeq = 0; NET.vues = 0; NET.derniereVue = 0;
   NET.pairId = null; NET.moi = null; NET.dernierVu = Date.now();
-  $('salonEtat').textContent = 'Salon LOB7 relié — en attente d’un adversaire…';
-  $('salonId').textContent = 'Ton identifiant de duel : ' + NET.monId.slice(0, 10) + '… (le plus petit devient Azur)';
+  $('salonEtat').textContent = T('salon.relie');
+  $('salonId').textContent = T('salon.id', { id: NET.monId.slice(0, 10) });
   conn.send({ type: 'hello', jeu: 'strates', clientId: NET.monId }, { idempotencyKey: 'hello-' + NET.monId })
     .then(annoncerSalon)
     .catch(function () {           // retry avec la même clé d'idempotence
       setTimeout(function () {
         conn.send({ type: 'hello', jeu: 'strates', clientId: NET.monId }, { idempotencyKey: 'hello-' + NET.monId })
           .then(annoncerSalon)
-          .catch(function () { salonPerdu('impossible d’annoncer sa présence dans le salon'); });
+          .catch(function () { salonPerdu(T('net.annonce')); });
       }, 1500);
     });
   NET.hbT = setInterval(function () {
@@ -1743,7 +2069,7 @@ function demarrerSalon(conn) {
   }, 5000);
   NET.watchT = setInterval(function () {
     if (NET.actif && NET.pairId && Date.now() - NET.dernierVu > 16000)
-      salonPerdu('l’adversaire ne répond plus');
+      salonPerdu(T('net.muets'));
   }, 4000);
 }
 /* on ne s'abonne qu'après notre propre hello : l'historique périmé du
@@ -1756,7 +2082,7 @@ function annoncerSalon(m) {
 
 function erreurSalon(err) {
   if (NET.actif && err && ERREURS_FATALES.indexOf(err.code) >= 0)
-    salonPerdu('connexion au salon perdue (' + err.code + ')');
+    salonPerdu(T('net.perdu', { c: err.code }));
 }
 
 function netEnvoyer(donnees, cle) {
@@ -1780,17 +2106,17 @@ function traiterMessageSalon(msg) {
   if (d.type === 'hello') {
     if (!NET.pairId) { NET.pairId = d.clientId; elire(); }
   } else if (d.type === 'quit') {
-    salonPerdu('l’adversaire a quitté le salon');
+    salonPerdu(T('net.quitte'));
   } else if (d.type === 'action' && NET.moi === 'A') {
     recevoirActionCorail(d);
   } else if (d.type === 'vue' && NET.moi === 'C') {
     appliquerVue(d);
   } else if (d.type === 'refus' && NET.moi === 'C') {
-    toast('Coup refusé par l’arbitre : ' + (d.motif || 'illégal') + '. Résynchronisation…');
+    toast(T('net.refus', { m: d.motif || T('net.m.illegal') }));
   } else if (d.type === 'fin' && NET.moi === 'C') {
     appliquerFin(d);
   } else if (d.type === 'rejouer' && NET.moi === 'A') {
-    toast('L’adversaire propose une revanche — nouvelle partie.');
+    toast(T('net.revanche'));
     relancerPartieEnLigne();
   }
 }
@@ -1807,10 +2133,10 @@ function elire() {
   S.selection = null; S.dests = []; S.camFin = 'A';
   souris.x = -1; souris.y = -1; survol = null;
   if (NET.moi === 'A') {
-    toast('Tu es Azur — hôte et arbitre du volume. Tu commences.', 3600);
+    toast(T('net.azur'), 3600);
     diffuserVue();
   } else {
-    toast('Tu es Corail — l’Azur (hôte-arbitre) commence.', 3600);
+    toast(T('net.corail'), 3600);
   }
   majHUD();
 }
@@ -1862,7 +2188,7 @@ function appliquerVue(d) {
   $('victoire').classList.add('cache');
   S.phase = (p.j === NET.moi) ? 'jeu' : 'attente';
   if (S.phase === 'jeu')
-    toast(S.scan ? 'À toi de jouer — tomographie z=' + S.scan.z + ' ce tour.' : 'À toi de jouer.', 2600);
+    toast(S.scan ? T('net.aToiScan', { z: S.scan.z }) : T('net.aToi'), 2600);
   majHUD();
 }
 
@@ -1903,13 +2229,13 @@ function recevoirActionCorail(d) {
   if (MODE !== 'enligne' || NET.moi !== 'A' || !d.action || !d.cle) return;
   if (S.phase === 'fin' || S.gagnant) { diffuserVue(); return; }
   if (NET.cles[d.cle]) { diffuserVue(); return; }
-  var a = d.action, ok = false, motif = 'action inconnue';
+  var a = d.action, ok = false, motif = T('net.m.inconnu');
   function dans(c) { return Number.isInteger(c) && c >= 0 && c < N; }
   function zvalide(c) { return Number.isInteger(c) && c >= 0 && c < HMAX; }
-  if (S.joueur !== 'C') motif = 'ce n’est pas ton tour';
+  if (S.joueur !== 'C') motif = T('net.m.tour');
   else if (a.kind === 'pose') {
     ok = dans(a.x) && dans(a.y) && legalPose(S, a.x, a.y);
-    if (!ok) motif = 'pose illégale';
+    if (!ok) motif = T('net.m.pose');
   } else if (a.kind === 'deplace') {
     ok = dans(a.x) && dans(a.y) && zvalide(a.z) && dans(a.nx) && dans(a.ny) &&
          S.grille[a.x][a.y][a.z] === 'C';
@@ -1918,10 +2244,10 @@ function recevoirActionCorail(d) {
       for (i = 0; i < ds.length; i++) if (ds[i].x === a.nx && ds[i].y === a.ny) { trouve = true; break; }
       ok = trouve;
     }
-    if (!ok) motif = 'déplacement illégal';
+    if (!ok) motif = T('net.m.deplace');
   } else if (a.kind === 'mine') {
     ok = dans(a.x) && dans(a.y) && zvalide(a.z) && S.grille[a.x][a.y][a.z] === 'C';
-    if (!ok) motif = 'minage illégal';
+    if (!ok) motif = T('net.m.mine');
   }
   if (!ok) {
     netEnvoyer({ type: 'refus', clientId: NET.monId, cle: d.cle, motif: motif });
@@ -1948,7 +2274,7 @@ function corailJoue(a, appliquer) {
   netEnvoyer({ type: 'action', clientId: NET.monId,
                action: { kind: a.kind, x: a.x, y: a.y, z: a.z, nx: a.nx, ny: a.ny },
                cle: cle }, cle);
-  toast('Coup envoyé à l’arbitre…');
+  toast(T('net.envoye'));
   majHUD();
 }
 
@@ -1959,7 +2285,7 @@ function relancerPartieEnLigne() {
   souris.x = -1; souris.y = -1; survol = null;
   $('victoire').classList.add('cache');
   diffuserVue();
-  toast('Nouvelle partie — Azur commence.');
+  toast(T('net.nouvelle'));
   majHUD();
 }
 
@@ -1994,21 +2320,17 @@ function quitterSalon() {
   }, 350);
 }
 
-/* ---------- branchements des modes (accueil, salon, IA) ---------- */
+/* ---------- branchements des modes (accueil, salon, IA) ----------
+   Bouton principal de l'accueil : au centre exact de l'écran, un clic
+   démarre directement une partie contre l'IA (Normal) — la plateforme
+   de capture clique au centre. Les autres modes sont secondaires. */
 function brancherModeles() {
   $('choixLocal').addEventListener('click', function () { MODE = 'local'; partirJouer(); });
-  $('choixIA').addEventListener('click', function () {
-    $('menuPrincipal').classList.add('cache');
-    $('etapeIA').classList.remove('cache');
-  });
-  $('choixRetour').addEventListener('click', function () {
-    $('etapeIA').classList.add('cache');
-    $('menuPrincipal').classList.remove('cache');
-  });
+  $('choixIAPrincipal').addEventListener('click', function () { MODE = 'ia'; IA_NIVEAU = 'normal'; partirJouer(); });
   $('choixIAFacile').addEventListener('click', function () { MODE = 'ia'; IA_NIVEAU = 'facile'; partirJouer(); });
-  $('choixIANormal').addEventListener('click', function () { MODE = 'ia'; IA_NIVEAU = 'normal'; partirJouer(); });
   $('choixLigne').addEventListener('click', tenterEnLigne);
   $('btnReglesAccueil').addEventListener('click', function () { $('regles').classList.remove('cache'); });
+  $('btnLangueAccueil').addEventListener('click', function () { changerLangue(LANG === 'en' ? 'fr' : 'en'); });
   $('btnQuitterSalon').addEventListener('click', quitterSalon);
   $('btnQuitterSalon2').addEventListener('click', quitterSalon);
   $('btnRetourAccueil').addEventListener('click', function () {
@@ -2021,6 +2343,7 @@ function brancherModeles() {
 Assets.init();
 brancherEntrees();
 brancherModeles();
+appliquerI18N();      // langue au boot : EN par défaut, FR si sessionStorage le dit
 ajusterCanvas();
 afficherAccueil();
 requestAnimationFrame(boucle);

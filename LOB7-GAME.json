@@ -22,5 +22,6 @@
   "multiplayer": {
     "mode": "room",
     "maxPlayers": 2
-  }
+  },
+  "cover": "cover.png"
 }
