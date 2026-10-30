@@ -2,7 +2,7 @@
   "title": "Strates",
   "description": "Hex in 3D, with gravity. Bridge your two faces of the volume by placing, moving or mining cubes — and set ambushes in caverns your opponent cannot see from their side of the board. Play hotseat, against an honest AI, or online with a friend in a LOB7 room.",
   "entrypoint": "index.html",
-  "license": "CC BY-SA 4.0",
+  "license": "MIT",
   "controls": [
     "Click the ground or the top of a column to place a cube; click one of your cubes (side face) then a ghost target to move; double-click, press M or use the button to mine.",
     "Each player sees the board from their own fixed side only — hidden cubes are legal ambushes.",

@@ -13,4 +13,4 @@ no dependencies). Three modes: hotseat (two players share the screen), against a
 honest AI (Easy/Normal — it never sees more than you), or online in a LOB7 room
 (two browsers, host as arbiter).
 
-Pieces rendered in Blender 4.5 (Kimi K3.1 Pro). License: CC BY-SA 4.0.
+Pieces rendered in Blender 4.5 (Kimi K3.1 Pro). License: MIT.
