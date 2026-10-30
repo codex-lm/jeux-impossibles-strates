@@ -1,6 +1,54 @@
 window.ASSETS_MANIFEST = {
   "assets": [
     {
+      "id": "strates/cube/azur",
+      "game": "strates",
+      "role": "cube",
+      "color": "azur",
+      "format": "png",
+      "variants": [
+        {
+          "px": 2048,
+          "file": "strates/cube_azur_2048.png"
+        },
+        {
+          "px": 1024,
+          "file": "strates/cube_azur_1024.png"
+        }
+      ]
+    },
+    {
+      "id": "strates/cube/corail",
+      "game": "strates",
+      "role": "cube",
+      "color": "corail",
+      "format": "png",
+      "variants": [
+        {
+          "px": 2048,
+          "file": "strates/cube_corail_2048.png"
+        },
+        {
+          "px": 1024,
+          "file": "strates/cube_corail_1024.png"
+        }
+      ]
+    },
+    {
+      "id": "strates/fond/canyon",
+      "game": "strates",
+      "role": "decor",
+      "format": "png",
+      "width": 3840,
+      "height": 2160,
+      "variants": [
+        {
+          "px": 2160,
+          "file": "strates/fond_canyon_2160.png"
+        }
+      ]
+    },
+    {
       "id": "strates/texture/azur",
       "game": "strates",
       "role": "texture",
@@ -36,6 +84,20 @@ window.ASSETS_MANIFEST = {
         {
           "px": 1024,
           "file": "strates/texture_neutre.png"
+        }
+      ]
+    },
+    {
+      "id": "common/fond",
+      "game": "common",
+      "role": "decor",
+      "format": "png",
+      "width": 3840,
+      "height": 2160,
+      "variants": [
+        {
+          "px": 2160,
+          "file": "common/fond_2160.png"
         }
       ]
     },
