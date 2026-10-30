@@ -949,7 +949,7 @@ function cubesVisibles(cam, grille) {
     for (i = 0; i < items.length; i++) {
       var it = items[i], o = coinsCube(it.u, it.v, it.z);
       var k = it.x + ',' + it.y + ',' + it.z;
-      var fs = [[o.TF, o.TR, o.TN, o.TG], [o.TR, o.TN, o.BN, o.BR], [o.TG, o.TF, o.BF, o.BG]];
+      var fs = [[o.TF, o.TR, o.TN, o.TG], [o.TR, o.TN, o.BN, o.BR], [o.TG, o.TN, o.BN, o.BG]];
       for (f = 0; f < 3; f++) {
         faces.push({ p: fs[f], k: k });
         for (var pt = 0; pt < 4; pt++) {
@@ -1556,8 +1556,12 @@ function construireItems(cam) {
   return items;
 }
 
+/* z is the bottom layer of a cube; its visual centre is half a cube above it.
+   The Blender sprite, polygons, ghosts and visibility tests share this anchor. */
+function centreCube(u, v, z) { return P(u, v, z + 0.5); }
+
 function coinsCube(u, v, z) {
-  var c = P(u, v, z);
+  var c = centreCube(u, v, z);
   return {
     TF: { x: c.x, y: c.y - (L.th + L.ch / 2) }, TR: { x: c.x + L.tw, y: c.y - L.ch / 2 },
     TN: { x: c.x, y: c.y + L.th - L.ch / 2 }, TG: { x: c.x - L.tw, y: c.y - L.ch / 2 },
@@ -1570,7 +1574,7 @@ function dessinerCube(item, cam, t) {
   var o = coinsCube(item.u, item.v, item.z);
   var haut = [o.TF, o.TR, o.TN, o.TG];
   var droite = [o.TR, o.TN, o.BN, o.BR];
-  var gauche = [o.TG, o.TF, o.BF, o.BG];
+  var gauche = [o.TG, o.TN, o.BN, o.BG];
   var silh = [o.TF, o.TR, o.BR, o.BN, o.BG, o.TG];
   var T = TEINTES[item.couleur];
   var camp = item.couleur === 'A' ? 'azur' : 'corail';
@@ -1580,7 +1584,7 @@ function dessinerCube(item, cam, t) {
   var pulse = 0.62 + 0.38 * Math.sin(t / 260);
 
   if (sprite) {
-    var centre = P(item.u, item.v, item.z);
+    var centre = centreCube(item.u, item.v, item.z);
     var taille = 2 * L.tw / 0.92;
     ctx.drawImage(sprite, centre.x - taille / 2, centre.y - taille / 2, taille, taille);
   } else if (tex) {
@@ -1637,7 +1641,7 @@ function dessinerFantome(item, cam, t) {
   ctx.restore();
   hits.push({ poly: [o.TF, o.TR, o.TN, o.TG], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'haut' });
   hits.push({ poly: [o.TR, o.TN, o.BN, o.BR], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'droite' });
-  hits.push({ poly: [o.TG, o.TF, o.BF, o.BG], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'gauche' });
+  hits.push({ poly: [o.TG, o.TN, o.BN, o.BG], kind: 'fantome', x: item.x, y: item.y, z: item.z, face: 'gauche' });
 }
 
 function dessinerPlateau(t) {
@@ -1768,7 +1772,7 @@ function dessinerPlateau(t) {
     var oc = coinsCube(sv[0], sv[1], survol.z);
     var pts = survol.face === 'haut' ? [oc.TF, oc.TR, oc.TN, oc.TG]
             : survol.face === 'droite' ? [oc.TR, oc.TN, oc.BN, oc.BR]
-            : [oc.TG, oc.TF, oc.BF, oc.BG];
+            : [oc.TG, oc.TN, oc.BN, oc.BG];
     tracer(ctx, pts, 'rgba(243,229,208,.9)', ep(1.8));
   }
 

@@ -14,3 +14,9 @@ honest AI (Easy/Normal — it never sees more than you), or online in a LOB7 roo
 (two browsers, host as arbiter).
 
 Pieces rendered in Blender 4.5 (Kimi K3.1 Pro). License: MIT.
+
+## Canyon 1.0.1 — cube alignment
+
+Blender cubes are anchored by their bottom plane in the centre of each ground
+square. Sprites, selection, move ghosts, stacking and visibility checks use the
+same geometry. The Blender images and game rules are preserved.
