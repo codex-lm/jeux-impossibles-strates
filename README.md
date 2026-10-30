@@ -1,16 +1,11 @@
-# Strates
+# Strates — Vue libre
 
-Hex in 3D, with gravity. Bridge your two faces of the volume by placing, moving or mining cubes — and set ambushes in caverns your opponent cannot see from their side of the board.
+An independent full-information variant of [Strates — Canyon 1.0.0](https://lob7.com/games/bg_s_871855f5-dc71-4447-80a4-ae9d65a8bfb2?release=br_s_b7794f41-36e8-4168-9509-3df9cf7736a7).
 
-Part of the *Jeux impossibles* series: five simple abstract strategy games that
-could never have been played before computers — fog of war, secret tide
-schedules, fair 3D occlusion, quantum superposition, simultaneous programming.
+Bridge opposite faces of the volume by placing, moving or mining cubes. Gravity, connection rules, Easy/Normal AI, hotseat and LOB7 rooms are retained.
 
-**Why not before:** fair occlusion — each player only sees from their own side — requires a screen; on a physical model you just change your viewing angle.
+Drag the board to orbit continuously and tilt. Use the wheel or +/− to zoom; Home or Reset view restores the camera. Arrow keys also rotate and tilt. A click still plays a move; dragging never places or mines a cube.
 
-Play it on LOB7: https://lob7.com — or open `index.html` directly (fully offline,
-no dependencies). Three modes: hotseat (two players share the screen), against an
-honest AI (Easy/Normal — it never sees more than you), or online in a LOB7 room
-(two browsers, host as arbiter).
+Both players and the AI know the full board in this variant. Online peers receive every cube. The original fixed-view edition and its hidden-information rules remain separate. Cubes have a geometric footprint inside each cell and a base at the board surface; rendering and hit testing use the same projected faces.
 
-Pieces rendered in Blender 4.5 (Kimi K3.1 Pro). License: MIT.
+Open index.html directly, or serve this folder with any static HTTP server. No build or remote dependency is needed. Textures and canyon art are inherited from the parent edition. MIT license; original author and asset credits are preserved in LICENSE and LOB7-GAME.json.

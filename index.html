@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>STRATES — 3D Hex with gravity and hidden caverns</title>
+<title>STRATES — 3D Hex with gravity — free camera</title>
 <style>
   :root{
     --nuit:#171221; --azur:#6ec8ff; --corail:#ff9166;
@@ -144,6 +144,15 @@
     border-left:3px solid var(--cuivre); background:rgba(217,142,74,.06); font-style:italic; color:var(--or)}
   #regles .fermer{margin-top:1.5rem; text-align:center}
   .cache{display:none !important}
+
+  #cameraControls{position:fixed;bottom:5.7rem;left:50%;transform:translateX(-50%);z-index:8;
+    display:flex;gap:.5rem;align-items:center;justify-content:center;flex-wrap:wrap;max-width:94vw;
+    background:rgba(25,17,32,.9);border:1px solid var(--bord);border-radius:16px;padding:.55rem .85rem;pointer-events:auto}
+  #cameraControls button{font-size:.7rem;padding:.5rem .8rem}
+  #cameraHint{font-size:.67rem;color:rgba(255,240,214,.72);text-align:center;flex-basis:100%}
+  @media(max-width:650px){#cameraControls{bottom:6.7rem;min-width:70vw}#cameraHint{font-size:.64rem}
+    #info{font-size:.7rem;max-width:45vw;min-width:0;padding:.45rem .6rem}#info .dim{font-size:.65rem}
+    #minimapWrap{transform:scale(.68);transform-origin:top right}header{padding-top:.5rem}h1{font-size:1.65rem}}
 </style>
 </head>
 <body>
@@ -152,7 +161,7 @@
 
 <header>
   <h1>STRATES</h1>
-  <div class="sous" data-i="tagline">3D Hex, with gravity and hidden caverns</div>
+  <div class="sous" data-i="tagline">3D Hex, with gravity and a free camera</div>
   <div class="filet"></div>
   <div class="boutons">
     <button id="btnLangue">FR</button>
@@ -163,6 +172,12 @@
   </div>
 </header>
 
+<div id="cameraControls" role="group" aria-label="Board camera" style="display:none">
+  <button id="cameraZoomOut" aria-label="Zoom out">−</button>
+  <button id="cameraReset" title="Initial view — Home key">Reset view</button>
+  <button id="cameraZoomIn" aria-label="Zoom in">+</button>
+  <span id="cameraHint">Drag: orbit and tilt · Wheel: zoom · Click: play</span>
+</div>
 <div id="info" class="panneau">
   <div class="joueur" id="tourLigne"></div>
   <div class="dim" id="dtLigne"></div>
@@ -219,11 +234,11 @@
   <div class="accueilHaut">
     <div class="sur" data-i="accueil.sur">Welcome to the canyon</div>
     <div class="nom">STRATES</div>
-    <div class="detail" data-i="accueil.detail">3D Hex, with gravity and hidden caverns.<br>Choose your duel.</div>
+    <div class="detail" data-i="accueil.detail">3D Hex, with gravity and a free camera.<br>Choose your duel.</div>
   </div>
-  <button class="choix principal" id="choixIAPrincipal" data-i="accueil.iaBtn">Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — honest: it only sees from its own side.</span></button>
+  <button class="choix principal" id="choixIAPrincipal" data-i="accueil.iaBtn">Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — it sees the same complete board as you.</span></button>
   <div class="accueilBas">
-    <button class="choix secondaire" id="choixLocal" data-i="accueil.localBtn">Two players — same screen<span class="sousBtn">The original duel: pass the device between turns.</span></button>
+    <button class="choix secondaire" id="choixLocal" data-i="accueil.localBtn">Two players — same screen<span class="sousBtn">A shared-screen duel: pass the device between turns.</span></button>
     <button class="choix secondaire" id="choixIAFacile" data-i="accueil.facileBtn">Against the AI — Easy<span class="sousBtn">About 60% random legal moves.</span></button>
     <button class="choix secondaire" id="choixLigne" data-i="accueil.ligneBtn">Online — LOB7 room<span class="sousBtn">Two browsers joined in a shared LOB7 room (lob7.com).</span></button>
     <div class="accueilBasBtns">
@@ -248,7 +263,7 @@
   <div class="sur" data-i="deco.sur">Room interrupted</div>
   <div class="nom" data-i="deco.nom">Game interrupted</div>
   <div class="detail" id="decoRaison"></div>
-  <div class="note" data-i="deco.note">Nothing was broadcast beyond the legitimate views — the caverns stay hollow.</div>
+  <div class="note" data-i="deco.note">The connection ended. You can start another duel.</div>
   <div class="actions"><button id="btnRetourAccueil" data-i="btn.retourAccueil">Back to home</button></div>
 </div>
 
@@ -257,7 +272,7 @@
   <div class="carte">
     <div id="reglesCorps" data-i="regles.corps">
     <h2>STRATES</h2>
-    <p style="color:rgba(243,229,208,.6)">3D Hex with gravity and hidden caverns — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>
+    <p style="color:rgba(243,229,208,.6)">3D Hex with gravity — free camera — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>
 
     <h3>The board</h3>
     <p>A <b>4×4</b> base; each column holds up to <b>4 cubes</b>, always filled from the ground, with no holes (strict gravity). Each player has <b>16 cubes</b> in reserve; the board starts empty. <span class="azurC">Azur</span> starts.</p>
@@ -270,8 +285,8 @@
     <h3 class="azurC">Victory — vertical Hex</h3>
     <p><span class="azurC">Azur</span> links the <b>West</b> face (x=0) to the <b>East</b> face (x=3); <span class="corailC">Corail</span> links <b>South</b> (y=0) to <b>North</b> (y=3), through a chain of face-touching cubes — adjacency in <b>6 directions</b> (±x, ±y, ±z). Checked after every action, collapses included. Simultaneous connections: the active player wins.</p>
 
-    <h3>Occlusion — the heart of the game</h3>
-    <p>Each player sees the board from <b>their own</b> side, with a <b>fixed</b> isometric camera: Azur from the West, Corail from the South. A low cube hidden behind a tall column is <b>invisible</b>: ambush is legal. No free rotation. Between turns, the “Pass the device” screen protects both views.</p>
+    <h3>A freely observable board</h3>
+    <p>In this <b>free-view variant</b>, both players know the entire board. <b>Drag</b> to orbit continuously and tilt, use the <b>wheel or +/−</b> to zoom, and <b>click</b> a visible face to play. Arrow keys adjust the camera; Home resets it. Cubes obscured by a stack can be inspected from another angle. The original edition keeps its hidden-view rules.</p>
 
     <h3>Tomography</h3>
     <p>Every <b>8 half-turns</b>, one random horizontal layer (z = 0 to 3) goes into <b>X-ray</b> for the whole turn: its cubes — even occluded — appear as a translucent see-through overlay. Public and momentary.</p>
@@ -282,13 +297,13 @@
     <h3>Game modes</h3>
     <p><b>Same screen</b> — the original duel, with a “pass the device” screen between turns. <b>Against the AI</b> — you are <span class="azurC">Azur</span>, the machine is <span class="corailC">Corail</span>: <i>Easy</i> plays about 60&nbsp;% random legal moves, <i>Normal</i> greedily scores every legal action (connect, block, preserve). <b>Online — LOB7 room</b> — two browsers joined in a shared lob7.com room.</p>
 
-    <h3>The AI is honest</h3>
-    <p>It knows its own cubes everywhere, but only takes <span class="azurC">Azur</span>’s cubes into account when they are <b>visible from its camera</b> (the South) or <b>revealed by a tomography scan</b> during its turn — never a masked position. It therefore sometimes reasons over a poorer board than the real one: that is the price of honesty.</p>
+    <h3>The AI sees the same board</h3>
+    <p>The AI uses the same <b>complete board</b> as you. Its Easy and Normal levels and the rules for placing, moving and mining cubes are unchanged.</p>
 
-    <h3>Online — honesty note</h3>
-    <p>The smallest identifier becomes <span class="azurC">Azur</span> and hosts the refereeing: only that browser holds the complete volume, validates moves and never broadcasts the raw state — <span class="corailC">Corail</span> only ever receives its own cubes, the enemy cubes visible from the South, the public heights and the active tomography scan. The host remains a <b>technical referee</b>: their browser physically knows the full state, so discretion is in order — but nothing invisible is ever sent to it, and victory is proclaimed by the host alone.</p>
+    <h3>Online — a shared board</h3>
+    <p>Both browsers receive the <b>complete board</b> in this variant. The host validates the moves and announces the winner. Keep the host tab open.</p>
 
-    <div class="pourquoi">Why impossible before computers: fair occlusion — each player only sees from their own side — requires a screen; on a physical model, one cheats by changing the angle.</div>
+    <div class="pourquoi">This free-view variant favours clear board inspection. Its parent retains the original hidden-view challenge.</div>
     </div>
     <div class="fermer"><button id="btnFermerRegles" data-i="btn.fermer">Close</button></div>
   </div>
@@ -301,6 +316,7 @@
      strates.html reste un fichier unique ouvert en file:// — l'inline
      est la seule façon de charger LOB7Rooms.connect() sans réseau.
      ===================================================================== -->
+<script src="camera-orbit.js"></script>
 <script>
 /* LOB7 Rooms SDK. Bundle locally; load before the optional lob7-rooms-p2p.js helper. */
 (function () {
@@ -502,8 +518,8 @@
    et Corail ne se traduisent pas. */
 var STR = {
   en: {
-    'doc.titre': 'STRATES — 3D Hex with gravity and hidden caverns',
-    'tagline': '3D Hex, with gravity and hidden caverns',
+    'doc.titre': 'STRATES — 3D Hex with gravity — free camera',
+    'tagline': '3D Hex, with gravity and a free camera',
     'btn.nouvelle': 'New game',
     'btn.regles': 'Rules',
     'btn.texturesAuto': 'Textures: auto',
@@ -540,13 +556,13 @@ var STR = {
     'but.A': 'link West (x=0) to East (x=3)',
     'but.C': 'link South (y=0) to North (y=3)',
     'niveau.facile': 'easy', 'niveau.normal': 'normal',
-    'barre.fin': 'Game over — freely inspect both viewpoints.',
+    'barre.fin': 'Game over — freely orbit and inspect the board.',
     'barre.attente': 'Opponent’s turn — only their visible view changes, hold on…',
     'barre.ia': 'The AI is thinking…',
     'barre.selection': 'Move this cube onto a coppery ghost — or mine it (it returns to your reserve).',
     'barre.aide': 'PLACE: click the ground or the <i>top</i> of a column &nbsp;·&nbsp; MOVE: click your cube (side face) &nbsp;·&nbsp; MINE: double-click, M key, or button',
     'pass.sur': 'Pass the device',
-    'pass.detail': 'You must {but} with a chain of face-touching cubes. Your camera is fixed, from {cote}: you see the {faces} faces, nothing else.',
+    'pass.detail': 'You must {but} with a chain of face-touching cubes. Drag the board to orbit and tilt; use the wheel or the +/− buttons to zoom. All cube positions are shared.',
     'pass.vide': 'The board is empty — Azur starts.',
     'pass.scan': 'Tomography scan this turn: layer z={z} will be X-rayed, even through the cubes.',
     'vic.sur': 'Game over',
@@ -556,9 +572,9 @@ var STR = {
     'vic.lien.C': 'Corail links South to North',
     'vic.detail': '{lien} with a chain of face-touching cubes — after {n} half-turns.',
     'vic.simul': 'Simultaneous connections: the active player wins.',
-    'vic.note': 'Occlusion played its part to the very end.',
+    'vic.note': 'Inspect the final board from any angle.',
     'ia.badge': 'The AI is thinking…',
-    'toast.ia': 'You are Azur — the AI ({n}) plays Corail from the South. Your opening cube is already placed.',
+    'toast.ia': 'You are Azur — the AI ({n}) plays Corail with the same complete board. Your opening cube is already placed.',
     'toast.aucunDep': 'No legal move — you can still mine this cube.',
     'toast.reserveVide': 'Reserve exhausted.',
     'toast.colonnePleine': 'Column full (height {n}).',
@@ -566,9 +582,9 @@ var STR = {
     'toast.scan': 'Tomography scan — layer z={z} revealed for this turn.',
     'plateau.coupe': 'slice z={z}',
     'accueil.sur': 'Welcome to the canyon',
-    'accueil.detail': '3D Hex, with gravity and hidden caverns.<br>Choose your duel.',
-    'accueil.iaBtn': 'Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — honest: it only sees from its own side.</span>',
-    'accueil.localBtn': 'Two players — same screen<span class="sousBtn">The original duel: pass the device between turns.</span>',
+    'accueil.detail': '3D Hex, with gravity and a free camera.<br>Choose your duel.',
+    'accueil.iaBtn': 'Play against the AI<span class="sousBtn">You are Azur, the machine is Corail (Normal) — it sees the same complete board as you.</span>',
+    'accueil.localBtn': 'Two players — same screen<span class="sousBtn">A shared-screen duel: pass the device between turns.</span>',
     'accueil.facileBtn': 'Against the AI — Easy<span class="sousBtn">About 60% random legal moves.</span>',
     'accueil.ligneBtn': 'Online — LOB7 room<span class="sousBtn">Two browsers joined in a shared LOB7 room (lob7.com).</span>',
     'accueil.regle': 'Read the rules',
@@ -579,7 +595,7 @@ var STR = {
     'salon.id': 'Your duel identifier: {id}… (the smallest becomes Azur)',
     'deco.sur': 'Room interrupted',
     'deco.nom': 'Game interrupted',
-    'deco.note': 'Nothing was broadcast beyond the legitimate views — the caverns stay hollow.',
+    'deco.note': 'The connection ended. You can start another duel.',
     'net.impossible': 'Online unavailable: {m}.',
     'net.horsLob7': 'outside LOB7 — open this file inside a LOB7 room (lob7.com), not directly',
     'net.injoignable': 'room unreachable ({c})',
@@ -603,7 +619,7 @@ var STR = {
     'net.nouvelle': 'New game — Azur starts.',
     'net.demande': 'Rematch request sent to the host…',
     'regles.corps': '<h2>STRATES</h2>' +
-      '<p style="color:rgba(243,229,208,.6)">3D Hex with gravity and hidden caverns — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>' +
+      '<p style="color:rgba(243,229,208,.6)">3D Hex with gravity — free camera — a turn-by-turn duel: two players on the same screen, against the AI, or online in a LOB7 room.</p>' +
       '<h3>The board</h3>' +
       '<p>A <b>4×4</b> base; each column holds up to <b>4 cubes</b>, always filled from the ground, with no holes (strict gravity). Each player has <b>16 cubes</b> in reserve; the board starts empty. <span class="azurC">Azur</span> starts.</p>' +
       '<h3>One action per turn</h3>' +
@@ -612,23 +628,23 @@ var STR = {
       '<p><b>3. MINE</b> — remove one of <b>your</b> cubes, even a buried one: it returns to your reserve and the column compresses one notch — enemy cubes fall. A tactical weapon. Double-click your cube, press <b>M</b>, or use the “Mine” button.</p>' +
       '<h3 class="azurC">Victory — vertical Hex</h3>' +
       '<p><span class="azurC">Azur</span> links the <b>West</b> face (x=0) to the <b>East</b> face (x=3); <span class="corailC">Corail</span> links <b>South</b> (y=0) to <b>North</b> (y=3), through a chain of face-touching cubes — adjacency in <b>6 directions</b> (±x, ±y, ±z). Checked after every action, collapses included. Simultaneous connections: the active player wins.</p>' +
-      '<h3>Occlusion — the heart of the game</h3>' +
-      '<p>Each player sees the board from <b>their own</b> side, with a <b>fixed</b> isometric camera: Azur from the West, Corail from the South. A low cube hidden behind a tall column is <b>invisible</b>: ambush is legal. No free rotation. Between turns, the “Pass the device” screen protects both views.</p>' +
+      '<h3>A freely observable board</h3>' +
+      '<p>In this <b>free-view variant</b>, both players know the entire board. <b>Drag</b> to orbit continuously and tilt, use the <b>wheel or +/−</b> to zoom, and <b>click</b> a visible face to play. Arrow keys adjust the camera; Home resets it. Cubes obscured by a stack can be inspected from another angle. The original edition keeps its hidden-view rules.</p>' +
       '<h3>Tomography</h3>' +
       '<p>Every <b>8 half-turns</b>, one random horizontal layer (z = 0 to 3) goes into <b>X-ray</b> for the whole turn: its cubes — even occluded — appear as a translucent see-through overlay. Public and momentary.</p>' +
       '<h3>Minimap</h3>' +
       '<p>Top right: the grid seen from above with the physical <b>height</b> of each column — public information. Colors, however, can only be seen from your own side.</p>' +
       '<h3>Game modes</h3>' +
       '<p><b>Same screen</b> — the original duel, with a “pass the device” screen between turns. <b>Against the AI</b> — you are <span class="azurC">Azur</span>, the machine is <span class="corailC">Corail</span>: <i>Easy</i> plays about 60&nbsp;% random legal moves, <i>Normal</i> greedily scores every legal action (connect, block, preserve). <b>Online — LOB7 room</b> — two browsers joined in a shared lob7.com room.</p>' +
-      '<h3>The AI is honest</h3>' +
-      '<p>It knows its own cubes everywhere, but only takes <span class="azurC">Azur</span>’s cubes into account when they are <b>visible from its camera</b> (the South) or <b>revealed by a tomography scan</b> during its turn — never a masked position. It therefore sometimes reasons over a poorer board than the real one: that is the price of honesty.</p>' +
-      '<h3>Online — honesty note</h3>' +
-      '<p>The smallest identifier becomes <span class="azurC">Azur</span> and hosts the refereeing: only that browser holds the complete volume, validates moves and never broadcasts the raw state — <span class="corailC">Corail</span> only ever receives its own cubes, the enemy cubes visible from the South, the public heights and the active tomography scan. The host remains a <b>technical referee</b>: their browser physically knows the full state, so discretion is in order — but nothing invisible is ever sent to it, and victory is proclaimed by the host alone.</p>' +
-      '<div class="pourquoi">Why impossible before computers: fair occlusion — each player only sees from their own side — requires a screen; on a physical model, one cheats by changing the angle.</div>'
+      '<h3>The AI sees the same board</h3>' +
+      '<p>The AI uses the same <b>complete board</b> as you. Its Easy and Normal levels and the rules for placing, moving and mining cubes are unchanged.</p>' +
+      '<h3>Online — a shared board</h3>' +
+      '<p>Both browsers receive the <b>complete board</b> in this variant. The host validates the moves and announces the winner. Keep the host tab open.</p>' +
+      '<div class="pourquoi">This free-view variant favours clear board inspection. Its parent retains the original hidden-view challenge.</div>'
   },
   fr: {
-    'doc.titre': 'STRATES — Hex en 3D, avec gravité et cavernes cachées',
-    'tagline': 'Hex en 3D, avec gravité et cavernes cachées',
+    'doc.titre': 'STRATES — Hex en 3D, avec gravité — caméra libre',
+    'tagline': 'Hex en 3D, avec gravité — caméra libre',
     'btn.nouvelle': 'Nouvelle partie',
     'btn.regles': 'Règles',
     'btn.texturesAuto': 'Textures&nbsp;: auto',
@@ -671,7 +687,7 @@ var STR = {
     'barre.selection': 'Déplace ce cube vers un fantôme cuivré — ou mine-le (il rentre en réserve).',
     'barre.aide': 'POSER&nbsp;: clique le sol ou le <i>dessus</i> d’une colonne &nbsp;·&nbsp; DÉPLACER&nbsp;: clique ton cube (face latérale) &nbsp;·&nbsp; MINER&nbsp;: double-clic, touche M, ou bouton',
     'pass.sur': 'Passe l’appareil',
-    'pass.detail': 'Tu dois {but} par une chaîne de cubes tangents. Ta caméra est fixe, depuis {cote} : tu vois les faces {faces}, rien d’autre.',
+    'pass.detail': 'Tu dois {but} par une chaîne de cubes tangents. Fais glisser le plateau pour tourner et incliner ; utilise la molette ou les boutons +/− pour zoomer. Toutes les positions des cubes sont partagées.',
     'pass.vide': 'Le plateau est vide — Azur commence.',
     'pass.scan': 'Tomographie ce tour : la couche z={z} sera révélée en radiographie, même à travers les cubes.',
     'vic.sur': 'Fin de partie',
@@ -681,9 +697,9 @@ var STR = {
     'vic.lien.C': 'Le Corail relie le Sud au Nord',
     'vic.detail': '{lien} par une chaîne de cubes tangents face à face — après {n} demi-tours.',
     'vic.simul': 'Connexions simultanées : la victoire revient au joueur actif.',
-    'vic.note': 'L’occultation a joué son rôle jusqu’au bout.',
+    'vic.note': 'Observe le plateau final sous tous les angles.',
     'ia.badge': 'L’IA réfléchit…',
-    'toast.ia': 'Tu es Azur — l’IA ({n}) joue Corail depuis le Sud. Ton cube d’ouverture est déjà posé.',
+    'toast.ia': 'Tu es Azur — l’IA ({n}) joue Corail avec le même plateau complet. Ton cube d’ouverture est déjà posé.',
     'toast.aucunDep': 'Aucun déplacement légal — tu peux encore miner ce cube.',
     'toast.reserveVide': 'Réserve épuisée.',
     'toast.colonnePleine': 'Colonne pleine (hauteur {n}).',
@@ -691,8 +707,8 @@ var STR = {
     'toast.scan': 'Tomographie — couche z={z} révélée pendant ce tour.',
     'plateau.coupe': 'coupe z={z}',
     'accueil.sur': 'Bienvenue au canyon',
-    'accueil.detail': 'Hex en 3D, avec gravité et cavernes cachées.<br>Choisis ton mode de duel.',
-    'accueil.iaBtn': 'Jouer contre l’IA<span class="sousBtn">Tu es Azur, la machine est Corail (niveau Normal) — honnête, elle ne voit que depuis son côté.</span>',
+    'accueil.detail': 'Hex en 3D, avec gravité — caméra libre.<br>Choisis ton mode de duel.',
+    'accueil.iaBtn': 'Jouer contre l’IA<span class="sousBtn">Tu es Azur, la machine est Corail (niveau Normal) — elle voit le même plateau complet que toi.</span>',
     'accueil.localBtn': 'Deux joueurs — même écran<span class="sousBtn">Le duel original : on se passe l’appareil entre les tours.</span>',
     'accueil.facileBtn': 'Contre l’IA — Facile<span class="sousBtn">Environ 60&nbsp;% de coups aléatoires légaux.</span>',
     'accueil.ligneBtn': 'En ligne — salon LOB7<span class="sousBtn">Deux navigateurs réunis dans un même salon LOB7 (lob7.com).</span>',
@@ -704,7 +720,7 @@ var STR = {
     'salon.id': 'Ton identifiant de duel : {id}… (le plus petit devient Azur)',
     'deco.sur': 'Salon interrompu',
     'deco.nom': 'Partie interrompue',
-    'deco.note': 'Rien n’a été diffusé au-delà des vues légitimes — les cavernes restent caves.',
+    'deco.note': 'La connexion est terminée. Tu peux lancer un autre duel.',
     'net.impossible': 'En ligne impossible : {m}.',
     'net.horsLob7': 'hors LOB7 — ouvre ce fichier dans un salon LOB7 (lob7.com), pas en direct',
     'net.injoignable': 'salon injoignable ({c})',
@@ -728,7 +744,7 @@ var STR = {
     'net.nouvelle': 'Nouvelle partie — Azur commence.',
     'net.demande': 'Demande de revanche envoyée à l’hôte…',
     'regles.corps': '<h2>STRATES</h2>' +
-      '<p style="color:rgba(243,229,208,.6)">Hex en 3D, avec gravité et cavernes cachées — duel au tour par tour&nbsp;: deux joueurs sur le même écran, contre l’IA, ou en ligne dans un salon LOB7.</p>' +
+      '<p style="color:rgba(243,229,208,.6)">Hex en 3D, avec gravité — caméra libre — duel au tour par tour&nbsp;: deux joueurs sur le même écran, contre l’IA, ou en ligne dans un salon LOB7.</p>' +
       '<h3>Le plateau</h3>' +
       '<p>Une base <b>4×4</b> ; chaque colonne accueille jusqu’à <b>4 cubes</b>, toujours remplie depuis le sol, sans trou (gravité stricte). Chaque joueur dispose de <b>16 cubes</b> en réserve ; le plateau est vide au départ. <span class="azurC">Azur</span> commence.</p>' +
       '<h3>À son tour, une seule action</h3>' +
@@ -737,19 +753,19 @@ var STR = {
       '<p><b>3. MINER</b> — retire un de <b>tes</b> cubes, même enfoui&nbsp;: il retourne en réserve et la colonne se compresse d’un cran — les cubes adverses tombent. Arme tactique. Double-clic sur ton cube, touche <b>M</b>, ou bouton « Miner ».</p>' +
       '<h3 class="azurC">Victoire — hex vertical</h3>' +
       '<p><span class="azurC">Azur</span> relie la face <b>Ouest</b> (x=0) à la face <b>Est</b> (x=3)&nbsp;; <span class="corailC">Corail</span> relie le <b>Sud</b> (y=0) au <b>Nord</b> (y=3), par une chaîne de cubes tangents face à face — adjacence en <b>6 directions</b> (±x, ±y, ±z). Vérifiée après chaque action, effondrements compris. Connexions simultanées&nbsp;: le joueur actif gagne.</p>' +
-      '<h3>Occultation — le cœur du jeu</h3>' +
-      '<p>Chaque joueur voit le plateau depuis <b>son</b> côté, en caméra isométrique <b>fixe</b>&nbsp;: Azur depuis l’Ouest, Corail depuis le Sud. Un cube bas dissimulé derrière une colonne haute est <b>invisible</b>&nbsp;: l’embuscade est légale. Aucune rotation libre. Entre les tours, l’écran « Passe l’appareil » protège les deux vues.</p>' +
+      '<h3>Un plateau librement observable</h3>' +
+      '<p>Dans cette <b>variante à vue libre</b>, les deux joueurs connaissent tout le plateau. <b>Glisse</b> pour tourner de façon continue et incliner, utilise la <b>molette ou +/−</b> pour zoomer, puis <b>clique</b> une face visible pour jouer. Les flèches règlent la caméra ; Origine la recentre. Un cube masqué par une pile peut être observé depuis un autre angle. La version originale garde ses règles de vue cachée.</p>' +
       '<h3>Tomographie</h3>' +
       '<p>Tous les <b>8 demi-tours</b>, une couche horizontale aléatoire (z = 0 à 3) passe en <b>radiographie</b> pendant tout le tour&nbsp;: ses cubes — même occlus — apparaissent en surimpression translucide traversante. Public et momentané.</p>' +
       '<h3>Minimap</h3>' +
       '<p>En haut à droite&nbsp;: la grille vue de dessus avec la <b>hauteur</b> physique de chaque colonne — information publique. Les couleurs, elles, ne se voient que depuis son côté.</p>' +
       '<h3>Modes de jeu</h3>' +
       '<p><b>Même écran</b> — le duel original, écran « passe l’appareil » entre les tours. <b>Contre l’IA</b> — tu es <span class="azurC">Azur</span>, la machine est <span class="corailC">Corail</span>&nbsp;: <i>Facile</i> joue environ 60&nbsp;% de coups aléatoires légaux, <i>Normal</i> évalue gloutonnement chaque action légale (relier, bloquer, préserver). <b>En ligne — salon LOB7</b> — deux navigateurs réunis dans un même salon lob7.com.</p>' +
-      '<h3>L’IA est honnête</h3>' +
-      '<p>Elle connaît ses cubes partout, mais ne tient compte des cubes d’<span class="azurC">Azur</span> que s’ils sont <b>visibles depuis sa caméra</b> (le Sud) ou <b>révélés par une tomographie</b> pendant son tour — jamais une position masquée. Elle raisonne donc parfois sur un plateau plus pauvre que le réel&nbsp;: c’est le prix de l’honnêteté.</p>' +
-      '<h3>En ligne — note d’honnêteté</h3>' +
-      '<p>Le plus petit identifiant devient <span class="azurC">Azur</span> et héberge l’arbitrage&nbsp;: seul son navigateur détient le volume complet, valide les coups et ne diffuse jamais l’état nu — à <span class="corailC">Corail</span> ne parviennent que ses propres cubes, les cubes adverses visibles depuis le Sud, les hauteurs publiques et la tomographie active. L’hôte reste un <b>arbitre technique</b>&nbsp;: son navigateur connaît physiquement l’état complet, la discrétion est donc de mise — mais rien d’invisible ne lui est jamais envoyé, et la victoire n’est proclamée que par lui.</p>' +
-      '<div class="pourquoi">Pourquoi impossible avant l’informatique&nbsp;: l’occultation équitable — chacun ne voit que depuis son côté — exige un écran ; sur une maquette physique, on triche en changeant d’angle.</div>'
+      '<h3>L’IA voit le même plateau</h3>' +
+      '<p>L’IA utilise le même <b>plateau complet</b> que toi. Ses niveaux Facile et Normal ainsi que les règles de pose, de déplacement et de minage restent les mêmes.</p>' +
+      '<h3>En ligne — un plateau partagé</h3>' +
+      '<p>Les deux navigateurs reçoivent le <b>plateau complet</b> dans cette variante. L’hôte valide les coups et annonce le vainqueur. Garde son onglet ouvert.</p>' +
+      '<div class="pourquoi">Cette variante à vue libre privilégie la lisibilité du plateau. Son parent conserve le défi original des vues cachées.</div>'
   }
 };
 
@@ -1034,18 +1050,8 @@ function clonerGrille(g) {
 }
 
 function grilleConnaissanceIA() {
-  var vis = cubesVisibles(CAMERAS.C, S.grille);
-  var g = [], x, y, z;
-  for (x = 0; x < N; x++) { g.push([]); for (y = 0; y < N; y++) {
-    var col = S.grille[x][y], k = [];
-    for (z = 0; z < col.length; z++) {
-      if (col[z] === 'C') k.push('C');
-      else if (vis[x + ',' + y + ',' + z] || (S.scan && z === S.scan.z)) k.push('A');
-      else k.push('X');
-    }
-    g[x].push(k);
-  } }
-  return g;
+  // Free-view variant: both the human and the AI receive the complete board.
+  return clonerGrille(S.grille);
 }
 
 /* Légalité : poses (réserve + hauteur publique), déplacements et minages
@@ -2174,7 +2180,6 @@ function elire() {
 /* La vue de Corail : ses cubes + cubes adverses visibles depuis la
    caméra SUD (ou couche tomographiée) + hauteurs publiques. C'est tout. */
 function construireVue() {
-  var vis = cubesVisibles(CAMERAS.C, S.grille);
   var h = [], Cs = [], Av = [], x, y, z;
   for (x = 0; x < N; x++) {
     h.push([]);
@@ -2183,7 +2188,7 @@ function construireVue() {
       var col = S.grille[x][y];
       for (z = 0; z < col.length; z++) {
         if (col[z] === 'C') Cs.push([x, y, z]);
-        else if (vis[x + ',' + y + ',' + z] || (S.scan && z === S.scan.z)) Av.push([x, y, z]);
+        else Av.push([x, y, z]);
       }
     }
   }
@@ -2378,5 +2383,6 @@ ajusterCanvas();
 afficherAccueil();
 requestAnimationFrame(boucle);
 </script>
+<script src="free-view.js"></script>
 </body>
 </html>

@@ -1,12 +1,12 @@
 {
-  "title": "Strates",
-  "description": "Hex in 3D, with gravity. Bridge your two faces of the volume by placing, moving or mining cubes — and set ambushes in caverns your opponent cannot see from their side of the board. Play hotseat, against an honest AI, or online with a friend in a LOB7 room.",
+  "title": "Strates — Vue libre",
+  "description": "A full-information variant of Strates, the 3D connection game with gravity. Orbit the board continuously, tilt and zoom to inspect the stacks, then place, move or mine cubes from the chosen angle. The AI and both online players share the complete board. Hotseat, Easy/Normal AI and LOB7 rooms.",
   "entrypoint": "index.html",
   "license": "MIT",
   "controls": [
-    "Click the ground or the top of a column to place a cube; click one of your cubes (side face) then a ghost target to move; double-click, press M or use the button to mine.",
-    "Each player sees the board from their own fixed side only — hidden cubes are legal ambushes.",
-    "Hotseat: pass the device between turns."
+    "Drag the board to orbit continuously and tilt. Use the wheel or +/− buttons to zoom; Reset view or Home restores the camera. Arrow keys rotate and tilt.",
+    "Click the ground or the top of a column to place a cube; click one of your cubes on a side face then a ghost target to move; double-click, press M or use the button to mine.",
+    "This variant shares all cube positions with both players and the AI. Rotate to see around stacks. Hotseat: pass the device between turns."
   ],
   "genre": [
     "Strategy",
@@ -17,7 +17,8 @@
     "Connection"
   ],
   "credits": [
-    "A game by Cédric Bernadac, created with AI agents (ZCode & Kimi K3.1 Pro)."
+    "A game by Cédric Bernadac, created with AI agents (ZCode & Kimi K3.1 Pro).",
+    "Free-view camera and corrected cube geometry: Nilo (Codex)."
   ],
   "multiplayer": {
     "mode": "room",
